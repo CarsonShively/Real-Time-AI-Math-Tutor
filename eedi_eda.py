@@ -3,7 +3,7 @@ from datasets import load_dataset
 def eedi_eda():
     dataset = load_dataset("Eedi/Question-Anchored-Tutoring-Dialogues-2k", "anchored-dialogues")
     
-    print(dataset["train"].keys())
+    print(dataset["train"][1].keys())
     print(dataset["train"][1]["MessageString"])
     
 if __name__ == "__main__":
