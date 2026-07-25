@@ -7,8 +7,8 @@ def mathdial_eda():
     print(dataset.keys())
     print(type(dataset["train"]))
     print(dataset["train"][0].keys())
-    print(dataset["train"][0]["student_incorrect_solution"])
-    print(type(dataset["train"][0]["student_incorrect_solution"]))
+    print(dataset["train"][0]["ground_truth"])
+    print(type(dataset["train"][0]["ground_truth"]))
     
 if __name__ == "__main__":
     mathdial_eda()
