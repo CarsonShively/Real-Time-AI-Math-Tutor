@@ -9,10 +9,11 @@ def build_samples():
         problem = train_sample["question"]
         user_work = train_sample["student_incorrect_solution"]
         correct_work = train_sample["ground_truth"]
-        mistake = 
-        conversation = 
-        target = 
+        mistake = train_sample["teacher_described_confusion"]
         
         conversation_turns = train_sample["conversation"].split("")
+        
+        conversation = 
+        target = 
         
         sample = {}
