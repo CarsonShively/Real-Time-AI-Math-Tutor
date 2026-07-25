@@ -6,11 +6,13 @@ def build_samples():
     train = {}
     
     for train_sample in dataset["train"]:
-        problem = 
+        problem = train_sample["question"]
         user_work = 
         correct_work = 
         mistake = 
         conversation = 
         target = 
+        
+        conversation_turns = train_sample["conversation"].split("")
         
         sample = {}
