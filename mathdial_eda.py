@@ -6,6 +6,7 @@ def mathdial_eda():
     print(type(dataset))
     print(dataset.keys())
     print(type(dataset["train"]))
+    print(dataset["train"][0])
     
 if __name__ == "__main__":
     mathdial_eda()
