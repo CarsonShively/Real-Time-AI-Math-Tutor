@@ -8,7 +8,7 @@ def build_samples():
     for train_sample in dataset["train"]:
         problem = train_sample["question"]
         user_work = train_sample["student_incorrect_solution"]
-        correct_work = 
+        correct_work = train_sample["ground_truth"]
         mistake = 
         conversation = 
         target = 
