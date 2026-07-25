@@ -1,0 +1,7 @@
+LICENSE
+pyproject.toml
+src/real_time_ai_math_tutor.egg-info/PKG-INFO
+src/real_time_ai_math_tutor.egg-info/SOURCES.txt
+src/real_time_ai_math_tutor.egg-info/dependency_links.txt
+src/real_time_ai_math_tutor.egg-info/requires.txt
+src/real_time_ai_math_tutor.egg-info/top_level.txt
