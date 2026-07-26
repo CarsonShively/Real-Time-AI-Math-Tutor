@@ -102,6 +102,8 @@ def build_samples():
     with open(out_path / "test.json", "w") as con:
         json.dump(test, con)
     
+    print("samples complete")
+    
     if get_token() is not None:
         api = HfApi()
         api.upload_file(
