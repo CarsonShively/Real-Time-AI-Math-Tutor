@@ -36,6 +36,7 @@ def build_samples():
                     turn = turn.split(")", maxsplit=1)[1]
                 except:
                     print(repr(turn_copy))
+                    continue
                     
                 turn = turn.strip()
                 
@@ -85,7 +86,7 @@ def build_samples():
                     turn = turn.split(")", maxsplit=1)[1]
                 except:
                     print(repr(turn_copy))
-                    raise
+                    continue
                 turn = turn.strip()
                 
                 tutor_turn = {
