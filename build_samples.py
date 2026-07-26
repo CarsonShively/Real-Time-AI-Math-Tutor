@@ -3,7 +3,7 @@ from datasets import load_dataset
 def build_samples():
     dataset = load_dataset("eth-nlped/mathdial")
     
-    train = {}
+    train = []
     
     train_index = 0
     for train_sample in dataset["train"]:
@@ -12,19 +12,15 @@ def build_samples():
         
         conversation_turns = train_sample["conversation"].split("")
         
-        conversation = {}
+        conversation = []
         target = conversation_turns[0]
         
-        sample = {
-            "problem": problem,
-            "user_work": user_work,
-            "conversation": conversation,
-            "target": target
-        }
-        
-        train[train_index] = sample
-        train_index += 1
         
         for turn in conversation_turns:
-            if turn.startswith("")
-            
+            if turn.startswith(""):
+                
+            user_input = ""
+                
+            sample = {
+                "user"
+            }
