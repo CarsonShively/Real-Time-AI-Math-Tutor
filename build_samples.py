@@ -31,8 +31,13 @@ def build_samples():
             
             if turn.startswith("Teacher:"):
                 
-                turn = turn.removeprefix("Teacher: (probing)")
-                turn = turn.removeprefix("Teacher: (generic)")
+                try:
+                    turn_copy = turn
+                    turn = turn.split(")", maxsplit=1)[1]
+                except:
+                    print(repr(turn_copy))
+                    
+                turn = turn.strip()
                 
                 tutor_turn = {
                     "role": "assistant",
@@ -42,7 +47,8 @@ def build_samples():
                 conversation.append(tutor_turn)
             else:
                 turn = turn.split(":", maxsplit=1)[1]
-                    
+                turn = turn.strip()
+                
                 user_turn = {
                     "role": "user",
                     "content": turn
@@ -74,8 +80,13 @@ def build_samples():
             
             if turn.startswith("Teacher:"):
                 
-                turn = turn.removeprefix("Teacher: (probing)")
-                turn = turn.removeprefix("Teacher: (generic)")
+                try:
+                    turn_copy = turn
+                    turn = turn.split(")", maxsplit=1)[1]
+                except:
+                    print(repr(turn_copy))
+                    raise
+                turn = turn.strip()
                 
                 tutor_turn = {
                     "role": "assistant",
@@ -85,6 +96,7 @@ def build_samples():
                 conversation.append(tutor_turn)
             else:
                 turn = turn.split(":", maxsplit=1)[1]
+                turn = turn.strip()
                     
                 user_turn = {
                     "role": "user",

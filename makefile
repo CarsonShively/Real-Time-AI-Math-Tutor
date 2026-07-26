@@ -35,3 +35,5 @@ demo: $(STAMP)
 cloudflare-tunnel: 
 	cloudflared tunnel --url http://localhost:8000
 
+build-samples: $(STAMP)
+	$(PY) build_samples.py
