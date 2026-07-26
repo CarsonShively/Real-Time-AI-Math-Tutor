@@ -15,9 +15,9 @@ def samples_eda():
     with open(samples / "test.json", "r") as con:
         test = json.load(con)
     
-    print(train[10])
+    print(train[26])
     print("\n\n\n")
-    print(test[10])
+    print(test[26])
     
 if __name__ == "__main__":
     samples_eda()

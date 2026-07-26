@@ -37,3 +37,12 @@ cloudflare-tunnel:
 
 build-samples: $(STAMP)
 	$(PY) build_samples.py
+
+samples-eda: $(STAMP)
+	$(PY) samples_eda.py
+
+hf-dataset-login:
+	$(HF) auth login
+
+hf-dataset-logout:
+	$(HF) auth logout

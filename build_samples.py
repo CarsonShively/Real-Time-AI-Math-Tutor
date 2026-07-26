@@ -106,7 +106,8 @@ def build_samples():
             
         test.append(conversation)
         
-    out_path = Path("/kaggle/working")
+    out_path = Path(__file__).resolve().parents[0] / "samples"
+    out_path.mkdir(parents=True, exist_ok=True)
     
     with open(out_path / "train.json", "w") as con:
         json.dump(train, con)
