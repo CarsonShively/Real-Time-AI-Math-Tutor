@@ -32,10 +32,9 @@ def build_samples():
             if turn.startswith("Teacher:"):
                 
                 try:
-                    turn_copy = turn
                     turn = turn.split(")", maxsplit=1)[1]
-                except:
-                    print(repr(turn_copy))
+                except IndexError:
+                    print(repr(turn))
                     continue
                     
                 turn = turn.strip()
@@ -82,10 +81,9 @@ def build_samples():
             if turn.startswith("Teacher:"):
                 
                 try:
-                    turn_copy = turn
                     turn = turn.split(")", maxsplit=1)[1]
-                except:
-                    print(repr(turn_copy))
+                except IndexError:
+                    print(repr(turn))
                     continue
                 turn = turn.strip()
                 
