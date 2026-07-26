@@ -10,10 +10,10 @@ def samples_eda():
     ))
     
     with open(samples / "train.json", "r") as con:
-        train = json.dump(con)
+        train = json.laod(con)
         
     with open(samples / "test.json", "r") as con:
-        test = json.dump(con)
+        test = json.load(con)
     
     print(train[10])
     print("\n\n\n")
