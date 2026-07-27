@@ -1,5 +1,3 @@
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from datasets import load_dataset
 from pathlib import Path
