@@ -26,7 +26,6 @@
                 muted
             ></video>
 
-            <!-- Hidden canvas used for image capture -->
             <canvas
                 id="capture-canvas"
                 hidden
@@ -35,8 +34,22 @@
             <div
                 id="camera-off-message"
                 class="camera-off-message hidden"
-            >
-                Camera is off
+                aria-hidden="true"
+            ></div>
+
+            <div class="voice-control">
+                <label for="voice-select">
+                    Tutor voice
+                </label>
+
+                <select
+                    id="voice-select"
+                    aria-label="Select tutor voice"
+                >
+                    <option value="">
+                        Loading voices...
+                    </option>
+                </select>
             </div>
 
             <div class="controls">

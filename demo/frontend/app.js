@@ -8,6 +8,9 @@ const microphoneButton = document.getElementById(
 const cameraButton = document.getElementById(
     "camera-button"
 );
+const voiceSelect = document.getElementById(
+    "voice-select"
+);
 
 const microphoneIcon = document.getElementById(
     "microphone-icon"
@@ -50,20 +53,24 @@ let recordedAudioBlob = null;
 let capturedImageBlob = null;
 let imageCapturePromise = null;
 
+// Text-to-speech state
+let availableVoices = [];
+
 const SPEECH_THRESHOLD = 0.02;
 const SILENCE_DURATION_MS = 1000;
 const IMAGE_CAPTURE_DELAY_MS = 500;
 
 async function startMedia() {
     try {
-        currentStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: {
-                    ideal: "environment",
+        currentStream =
+            await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: {
+                        ideal: "environment",
+                    },
                 },
-            },
-            audio: true,
-        });
+                audio: true,
+            });
 
         video.srcObject = currentStream;
         await video.play();
@@ -75,15 +82,17 @@ async function startMedia() {
             error
         );
 
-        cameraOffMessage.textContent =
-            "Camera or microphone permission was denied.";
-
+        cameraOffMessage.textContent = "";
         cameraOffMessage.classList.remove("hidden");
     }
 }
 
 function setupSpeechDetection() {
-    audioContext = new AudioContext();
+    const AudioContextClass =
+        window.AudioContext ||
+        window.webkitAudioContext;
+
+    audioContext = new AudioContextClass();
 
     const microphoneSource =
         audioContext.createMediaStreamSource(currentStream);
@@ -93,7 +102,9 @@ function setupSpeechDetection() {
 
     microphoneSource.connect(analyser);
 
-    audioData = new Float32Array(analyser.fftSize);
+    audioData = new Float32Array(
+        analyser.fftSize
+    );
 
     detectSpeech();
 }
@@ -130,7 +141,10 @@ function detectSpeech() {
         const silenceLength =
             now - silenceStartedAt;
 
-        if (silenceLength >= SILENCE_DURATION_MS) {
+        if (
+            silenceLength >=
+            SILENCE_DURATION_MS
+        ) {
             handleSpeechEnd();
         }
     }
@@ -177,15 +191,19 @@ function handleSpeechEnd() {
 }
 
 function startAudioRecording() {
-    const audioTracks = currentStream.getAudioTracks();
+    const audioTracks =
+        currentStream.getAudioTracks();
 
     if (audioTracks.length === 0) {
         return;
     }
 
-    const audioOnlyStream = new MediaStream(audioTracks);
+    const audioOnlyStream =
+        new MediaStream(audioTracks);
 
-    mediaRecorder = new MediaRecorder(audioOnlyStream);
+    mediaRecorder =
+        new MediaRecorder(audioOnlyStream);
+
     audioChunks = [];
 
     mediaRecorder.addEventListener(
@@ -200,15 +218,17 @@ function startAudioRecording() {
     mediaRecorder.addEventListener(
         "stop",
         async () => {
-            recordedAudioBlob = new Blob(audioChunks, {
-                type: mediaRecorder.mimeType,
-            });
+            recordedAudioBlob =
+                new Blob(audioChunks, {
+                    type: mediaRecorder.mimeType,
+                });
 
             audioChunks = [];
 
-            const imageBlob = imageCapturePromise
-                ? await imageCapturePromise
-                : capturedImageBlob;
+            const imageBlob =
+                imageCapturePromise
+                    ? await imageCapturePromise
+                    : capturedImageBlob;
 
             console.log(
                 "Recorded audio:",
@@ -220,7 +240,7 @@ function startAudioRecording() {
                 imageBlob
             );
 
-            handleCompletedTurn(
+            await handleCompletedTurn(
                 recordedAudioBlob,
                 imageBlob
             );
@@ -286,7 +306,10 @@ function captureImage() {
     });
 }
 
-async function handleCompletedTurn(audioBlob, imageBlob) {
+async function handleCompletedTurn(
+    audioBlob,
+    imageBlob
+) {
     console.log("Turn completed");
 
     const formData = new FormData();
@@ -306,10 +329,13 @@ async function handleCompletedTurn(audioBlob, imageBlob) {
     }
 
     try {
-        const response = await fetch("/inference", {
-            method: "POST",
-            body: formData,
-        });
+        const response = await fetch(
+            "/inference",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         if (!response.ok) {
             throw new Error(
@@ -319,15 +345,117 @@ async function handleCompletedTurn(audioBlob, imageBlob) {
 
         const result = await response.json();
 
-        console.log("Tutor response:", result.response);
+        console.log(
+            "Tutor response:",
+            result.response
+        );
 
-        // Display or speak result.response here.
+        speakResponse(result.response);
     } catch (error) {
         console.error(
             "Could not complete tutor turn:",
             error
         );
     }
+}
+
+function loadVoices() {
+    availableVoices =
+        window.speechSynthesis.getVoices();
+
+    voiceSelect.innerHTML = "";
+
+    const englishVoices =
+        availableVoices.filter(
+            (voice) =>
+                voice.lang
+                    .toLowerCase()
+                    .startsWith("en")
+        );
+
+    const voicesToShow =
+        englishVoices.length > 0
+            ? englishVoices
+            : availableVoices;
+
+    if (voicesToShow.length === 0) {
+        const option =
+            document.createElement("option");
+
+        option.value = "";
+        option.textContent =
+            "Default voice";
+
+        voiceSelect.appendChild(option);
+        return;
+    }
+
+    for (const voice of voicesToShow) {
+        const option =
+            document.createElement("option");
+
+        option.value = voice.voiceURI;
+        option.textContent =
+            `${voice.name} (${voice.lang})`;
+
+        if (voice.default) {
+            option.textContent +=
+                " — Default";
+        }
+
+        voiceSelect.appendChild(option);
+    }
+
+    const preferredVoice =
+        voicesToShow.find(
+            (voice) =>
+                voice.lang === "en-US" &&
+                /natural|neural|enhanced/i.test(
+                    voice.name
+                )
+        ) ??
+        voicesToShow.find(
+            (voice) =>
+                voice.lang === "en-US"
+        ) ??
+        voicesToShow.find(
+            (voice) => voice.default
+        ) ??
+        voicesToShow[0];
+
+    voiceSelect.value =
+        preferredVoice.voiceURI;
+}
+
+function speakResponse(text) {
+    if (
+        !text ||
+        !("speechSynthesis" in window)
+    ) {
+        return;
+    }
+
+    const speech =
+        new SpeechSynthesisUtterance(text);
+
+    const selectedVoice =
+        availableVoices.find(
+            (voice) =>
+                voice.voiceURI ===
+                voiceSelect.value
+        );
+
+    if (selectedVoice) {
+        speech.voice = selectedVoice;
+        speech.lang = selectedVoice.lang;
+    }
+
+    speech.rate = 1;
+    speech.pitch = 1;
+    speech.volume = 1;
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(speech);
 }
 
 function toggleMicrophone() {
@@ -337,11 +465,17 @@ function toggleMicrophone() {
 
     microphoneMuted = !microphoneMuted;
 
-    currentStream.getAudioTracks().forEach((track) => {
-        track.enabled = !microphoneMuted;
-    });
+    currentStream
+        .getAudioTracks()
+        .forEach((track) => {
+            track.enabled =
+                !microphoneMuted;
+        });
 
-    if (microphoneMuted && isSpeaking) {
+    if (
+        microphoneMuted &&
+        isSpeaking
+    ) {
         handleSpeechEnd();
     }
 
@@ -366,7 +500,9 @@ function toggleMicrophone() {
         microphoneMuted ? "🔇" : "🎤";
 
     microphoneLabel.textContent =
-        microphoneMuted ? "Unmute" : "Mute";
+        microphoneMuted
+            ? "Unmute"
+            : "Mute";
 }
 
 function toggleCamera() {
@@ -376,9 +512,12 @@ function toggleCamera() {
 
     cameraEnabled = !cameraEnabled;
 
-    currentStream.getVideoTracks().forEach((track) => {
-        track.enabled = cameraEnabled;
-    });
+    currentStream
+        .getVideoTracks()
+        .forEach((track) => {
+            track.enabled =
+                cameraEnabled;
+        });
 
     cameraButton.classList.toggle(
         "disabled",
@@ -405,6 +544,8 @@ function toggleCamera() {
             ? "Video"
             : "Start video";
 
+    cameraOffMessage.textContent = "";
+
     cameraOffMessage.classList.toggle(
         "hidden",
         cameraEnabled
@@ -419,6 +560,13 @@ microphoneButton.addEventListener(
 cameraButton.addEventListener(
     "click",
     toggleCamera
+);
+
+loadVoices();
+
+window.speechSynthesis.addEventListener(
+    "voiceschanged",
+    loadVoices
 );
 
 startMedia();
