@@ -48,9 +48,13 @@ def fine_tune():
         learning_rate=2e-4,
         weight_decay=0.01,
         max_length=2048,
-        output_dir=out_path,
+        output_dir=str(out_path),
         assistant_only_loss=True,
-        eval_strategy="epoch"
+        eval_strategy="epoch",
+        push_to_hub=True,
+        hub_model_id="Carson-Shively/ai-math-tutor",
+        fp16=True,
+        hub_strategy="end"
     )
     
     trainer = SFTTrainer(
@@ -59,9 +63,7 @@ def fine_tune():
         peft_config=lora_config,
         processing_class=tokenizer,
         train_dataset=train,
-        eval_dataset=test,
-        push_to_hub=True,
-        hub_model_id="Carson-Shively/ai-math-tutor"
+        eval_dataset=test
     )
     
     trainer.train()
