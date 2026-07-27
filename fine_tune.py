@@ -1,6 +1,6 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from huggingface_hub import login
-from getpass import getpass
 from datasets import load_dataset
 from pathlib import Path
 from trl import SFTConfig, SFTTrainer
