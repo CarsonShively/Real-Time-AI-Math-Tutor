@@ -1,6 +1,8 @@
 from transformers import AutoTokenizer, pipeline
 import torch
 from peft import AutoPeftModelForCausalLM
+from PIL import Image
+from io import BytesIO
 
 class Inference():
     def __init__(self):
@@ -38,7 +40,8 @@ class Inference():
         print(question)
         return question
     
-    def user_work(self, image):
+    def user_work(self, image_bytes):
+        image = Image.open(BytesIO(image_bytes)).convert("RGB")
         work = self.work_model(image)
         print(work)
         return work

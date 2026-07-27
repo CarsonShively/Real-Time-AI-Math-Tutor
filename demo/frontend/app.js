@@ -32,8 +32,8 @@ const cameraOffMessage = document.getElementById(
 
 let currentStream = null;
 
-let microphoneMuted = false;
-let cameraEnabled = true;
+let microphoneMuted = true;
+let cameraEnabled = false;
 
 // Speech-detection state
 let audioContext = null;
@@ -56,7 +56,7 @@ let imageCapturePromise = null;
 // Text-to-speech state
 let availableVoices = [];
 
-const SPEECH_THRESHOLD = 0.02;
+const SPEECH_THRESHOLD = 0.10;
 const SILENCE_DURATION_MS = 1000;
 const IMAGE_CAPTURE_DELAY_MS = 500;
 

@@ -14,3 +14,4 @@ python-multipart<1,>=0.0.20
 transformers<6,>=5.0
 trl<2,>=1.8
 peft<0.20,>=0.19
+pillow<13,>=12.0
