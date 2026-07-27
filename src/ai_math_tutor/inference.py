@@ -1,4 +1,4 @@
-from transformers import AutoTokenizer, pipeline
+from transformers import AutoTokenizer, pipeline, AutoProcessor, Qwen2_5_VLForConditionalGeneration
 import torch
 from peft import AutoPeftModelForCausalLM
 from PIL import Image
@@ -13,12 +13,14 @@ class Inference():
         
         self.tokenizer = AutoTokenizer.from_pretrained(tutor_model_base)
         
-        self.work_model = pipeline(
-            task="image-text-to-text",
-            model=user_work_model,
-            device=1,
+        self.work_processor = AutoProcessor.from_pretrained(user_work_model)
+        
+        self.work_model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+            user_work_model,
             dtype=torch.float16
-        )
+        ).to("cuda:1")
+        
+        self.work_model.eval()
         
         self.question_model = pipeline(
             task="automatic-speech-recognition",
@@ -60,7 +62,23 @@ class Inference():
             }
         ]
         
-        work = self.work_model(message)
+        work_input = self.work_processor.apply_chat_template(
+            message,
+            tokenize=True,
+            add_generation_prompt=True,
+            return_dict=True,
+            return_tensors="pt"
+        )
+
+        work_input = work_input.to("cuda:1")
+        
+        with torch.inference_mode():
+            work_ids = self.work_model.generate(**work_input, max_new_tokens=256, do_sample=False)
+            
+        prompt_len = work_input["input_ids"].shape[1]
+        work_ids = work_ids[:, prompt_len:]
+            
+        work = self.work_processor.batch_decode(work_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         print(work)
         return work
         
