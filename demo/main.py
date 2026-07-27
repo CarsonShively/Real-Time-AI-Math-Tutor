@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from ai_math_tutor.inference import Inference
 from fastapi.responses import FileResponse
 from pathlib import Path
-from ai_math_tutor.conversattion_state import ConversationState
+from ai_math_tutor.conversation_state import ConversationState
 
 @asynccontextmanager
 async def lifespan(app):
@@ -31,6 +31,14 @@ async def inference(audio: UploadFile=File(...), image: UploadFile | None=File(d
     else:
         work = ""
         
-    user_question = app.state.inference.user_questino(audio_bytes)
+    user_question = app.state.inference.user_question(audio_bytes)
     
+    user_turn = work + "\n" + user_question
     
+    app.state.conversation.add_user_turn(user_turn)
+    
+    tutor_response = app.state.inference.inference(app.state.conversation.get_conversation())
+    
+    app.state.conversation.add_tutor_turn(tutor_response)
+    
+    return {"response": tutor_response}

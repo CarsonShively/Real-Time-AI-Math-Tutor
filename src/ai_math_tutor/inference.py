@@ -14,48 +14,53 @@ class Inference():
         self.work_model = pipeline(
             task="image-text-to-text",
             model=user_work_model,
-            device=0,
+            device=1,
             dtype=torch.float16
         )
         
         self.question_model = pipeline(
             task="automatic-speech-recognition",
             model=user_question_model,
-            device=0,
+            device=1,
             dtype=torch.float16
         )
         
         self.tutor_model = AutoPeftModelForCausalLM.from_pretrained(
             tutor_model_adapter,
             dtype=torch.float16
-        ).to("cuda")
+        ).to("cuda:0")
         
         self.tutor_model.eval()
         
     def user_question(self, audio):
         question = self.question_model(audio)
+        question = question["text"].strip()
+        print(question)
         return question
     
     def user_work(self, image):
         work = self.work_model(image)
+        print(work)
         return work
         
     def inference(self, conversation):
     
         conversation_dict = self.tokenizer.apply_chat_template(
             conversation,
-            tokenze=True,
+            tokenize=True,
             add_generation_prompt=True,
             return_tensors="pt",
             return_dict=True
         )
     
-
+        cuda_conversation_dict = {}
+        for key, value in conversation_dict.items():
+            cuda_conversation_dict[key] = value.to("cuda:0")
         
         with torch.inference_mode():
-            conversation_plus_response = self.tutor_model.generate(**conversation_dict, max_tokens=256)
+            conversation_plus_response = self.tutor_model.generate(**cuda_conversation_dict, max_new_tokens=256)
         
-        conversation_length = conversation_dict["input_ids"][1]
+        conversation_length = cuda_conversation_dict["input_ids"].shape[1]
         
             
         response_tokens = conversation_plus_response[:, conversation_length:]

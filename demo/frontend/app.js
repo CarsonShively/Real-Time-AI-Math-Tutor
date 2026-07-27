@@ -282,20 +282,8 @@ function captureImage() {
     });
 }
 
-function handleCompletedTurn(audioBlob, imageBlob) {
+async function handleCompletedTurn(audioBlob, imageBlob) {
     console.log("Turn completed");
-    console.log("Audio:", audioBlob);
-
-    if (imageBlob) {
-        console.log("Image:", imageBlob);
-    } else {
-        console.log(
-            "No image was captured for this turn."
-        );
-    }
-
-    /*
-    Later, send both files to the backend:
 
     const formData = new FormData();
 
@@ -313,11 +301,29 @@ function handleCompletedTurn(audioBlob, imageBlob) {
         );
     }
 
-    fetch("/tutor-turn", {
-        method: "POST",
-        body: formData,
-    });
-    */
+    try {
+        const response = await fetch("/inference", {
+            method: "POST",
+            body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                `Inference failed: ${response.status}`
+            );
+        }
+
+        const result = await response.json();
+
+        console.log("Tutor response:", result.response);
+
+        // Display or speak result.response here.
+    } catch (error) {
+        console.error(
+            "Could not complete tutor turn:",
+            error
+        );
+    }
 }
 
 function toggleMicrophone() {
