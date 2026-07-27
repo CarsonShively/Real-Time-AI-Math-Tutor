@@ -12,7 +12,7 @@ def fine_tune():
     model_name = "Qwen/Qwen3-4B-Instruct-2507"
     
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.float16)
+    model = AutoModelForCausalLM.from_pretrained(model_name, dtype=torch.float16)
     
     dataset = load_dataset("Carson-Shively/ai-math-tutor")
 
