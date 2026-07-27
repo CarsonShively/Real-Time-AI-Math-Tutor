@@ -9,8 +9,6 @@ import torch
 
 def fine_tune():
     
-    login(token=getpass())
-    
     model_name = "Qwen/Qwen3-4B-Instruct-2507"
     
     tokenizer = AutoTokenizer.from_pretrained(model_name)
