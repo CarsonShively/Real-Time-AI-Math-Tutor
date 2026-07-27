@@ -1,15 +1,20 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from huggingface_hub import get_token
+from huggingface_hub import login
+from getpass import getpass
 from datasets import load_dataset
 from pathlib import Path
 from trl import SFTConfig, SFTTrainer
 from peft import LoraConfig
+import torch
 
 def fine_tune():
+    
+    login(token=getpass())
+    
     model_name = "Qwen/Qwen3-4B-Instruct-2507"
     
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.float16)
     
     dataset = load_dataset("Carson-Shively/ai-math-tutor")
 
@@ -44,7 +49,8 @@ def fine_tune():
         weight_decay=0.01,
         max_length=2048,
         output_dir=out_path,
-        assistant_only_loss=True
+        assistant_only_loss=True,
+        eval_strategy="epoch"
     )
     
     trainer = SFTTrainer(
@@ -53,15 +59,15 @@ def fine_tune():
         peft_config=lora_config,
         processing_class=tokenizer,
         train_dataset=train,
-        eval_dataset=test
+        eval_dataset=test,
+        push_to_hub=True,
+        hub_model_id="Carson-Shively/ai-math-tutor"
     )
     
     trainer.train()
     
     trainer.save_model()
     
-    if get_token() is not None:
-        trainer.push_to_hub("Carson-Shively/ai-math-tutor")
     
 if __name__ == "__main__":
     fine_tune()
