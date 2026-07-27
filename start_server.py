@@ -1,13 +1,49 @@
+import platform
 import re
+import shutil
 import subprocess
 import time
+import urllib.request
 from pathlib import Path
 
 import requests
 
+
 REPO = Path(__file__).resolve().parent
 PYTHON = REPO / ".venv/bin/python"
 LOCAL_URL = "http://127.0.0.1:8000"
+
+
+def get_cloudflared():
+    existing = shutil.which("cloudflared")
+
+    if existing:
+        return existing
+
+    if platform.machine() not in {"x86_64", "AMD64"}:
+        raise RuntimeError(
+            f"Unsupported architecture: {platform.machine()}"
+        )
+
+    install_path = Path("/usr/local/bin/cloudflared")
+    download_url = (
+        "https://github.com/cloudflare/cloudflared/"
+        "releases/latest/download/cloudflared-linux-amd64"
+    )
+
+    print("Installing cloudflared...")
+
+    urllib.request.urlretrieve(
+        download_url,
+        install_path,
+    )
+
+    install_path.chmod(0o755)
+
+    return str(install_path)
+
+
+cloudflared = get_cloudflared()
 
 server_process = subprocess.Popen(
     [
@@ -28,11 +64,17 @@ print("Waiting for server...")
 for attempt in range(180):
     if server_process.poll() is not None:
         raise RuntimeError(
-            f"Uvicorn exited with code {server_process.returncode}"
+            f"Uvicorn exited with code "
+            f"{server_process.returncode}"
         )
 
     try:
-        if requests.get(f"{LOCAL_URL}/docs", timeout=2).ok:
+        response = requests.get(
+            f"{LOCAL_URL}/docs",
+            timeout=2,
+        )
+
+        if response.ok:
             break
     except requests.RequestException:
         pass
@@ -42,13 +84,14 @@ for attempt in range(180):
 
     time.sleep(5)
 else:
-    raise RuntimeError("Server timed out.")
+    server_process.terminate()
+    raise RuntimeError("Server startup timed out.")
 
 print("Server ready.")
 
 tunnel_process = subprocess.Popen(
     [
-        "cloudflared",
+        cloudflared,
         "tunnel",
         "--url",
         LOCAL_URL,
@@ -59,19 +102,22 @@ tunnel_process = subprocess.Popen(
     bufsize=1,
 )
 
-public_url = None
+try:
+    for line in tunnel_process.stdout:
+        print(line, end="")
 
-for line in tunnel_process.stdout:
-    print(line, end="")
+        match = re.search(
+            r"https://[-a-z0-9]+\.trycloudflare\.com",
+            line,
+        )
 
-    match = re.search(
-        r"https://[-a-z0-9]+\.trycloudflare\.com",
-        line,
-    )
+        if match:
+            print("\nPublic URL:", match.group(0))
 
-    if match and public_url is None:
-        public_url = match.group(0)
-        print("\nPublic URL:", public_url)
+except KeyboardInterrupt:
+    print("\nStopping server and tunnel...")
 
-    if tunnel_process.poll() is not None:
-        break
+finally:
+    for process in (tunnel_process, server_process):
+        if process.poll() is None:
+            process.terminate()
