@@ -24,7 +24,8 @@ class Inference():
             task="automatic-speech-recognition",
             model=user_question_model,
             device=1,
-            dtype=torch.float16
+            dtype=torch.float16,
+            framework="pt"
         )
         
         self.tutor_model = AutoPeftModelForCausalLM.from_pretrained(
