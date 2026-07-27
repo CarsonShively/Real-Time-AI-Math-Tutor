@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>AI Tutor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <main class="video-page">
+        <section class="video-container">
+            <video
+                id="camera"
+                autoplay
+                playsinline
+                muted
+            ></video>
+
+            <!-- Hidden canvas used for image capture -->
+            <canvas
+                id="capture-canvas"
+                hidden
+            ></canvas>
+
+            <div
+                id="camera-off-message"
+                class="camera-off-message hidden"
+            >
+                Camera is off
+            </div>
+
+            <div class="controls">
+                <button
+                    id="microphone-button"
+                    class="control-button"
+                    type="button"
+                    aria-label="Mute microphone"
+                    aria-pressed="false"
+                >
+                    <span
+                        id="microphone-icon"
+                        class="control-icon"
+                    >
+                        🎤
+                    </span>
+
+                    <span
+                        id="microphone-label"
+                        class="control-label"
+                    >
+                        Mute
+                    </span>
+                </button>
+
+                <button
+                    id="camera-button"
+                    class="control-button"
+                    type="button"
+                    aria-label="Turn camera off"
+                    aria-pressed="false"
+                >
+                    <span
+                        id="camera-icon"
+                        class="control-icon"
+                    >
+                        📹
+                    </span>
+
+                    <span
+                        id="camera-label"
+                        class="control-label"
+                    >
+                        Video
+                    </span>
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

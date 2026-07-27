@@ -50,7 +50,8 @@ def fine_tune():
         push_to_hub=True,
         hub_model_id="Carson-Shively/ai-math-tutor",
         fp16=True,
-        hub_strategy="end"
+        hub_strategy="end",
+        ddp_find_unused_parameters=False
     )
     
     trainer = SFTTrainer(

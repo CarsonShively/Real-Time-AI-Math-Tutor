@@ -1,0 +1,156 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background:
+        linear-gradient(
+            145deg,
+            #071b38,
+            #0a3d78,
+            #0878c9
+        );
+    color: white;
+}
+
+.video-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.video-container {
+    position: relative;
+    width: min(100%, 1000px);
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border: 3px solid rgba(255, 255, 255, 0.35);
+    border-radius: 28px;
+    background: #03152d;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.4);
+}
+
+#camera {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
+.camera-off-message {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #03152d;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.hidden {
+    display: none;
+}
+
+.controls {
+    position: absolute;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+}
+
+.control-button {
+    width: 110px;
+    height: 110px;
+    padding: 0;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    border-radius: 50%;
+    background: rgba(9, 104, 190, 0.9);
+    color: white;
+
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    transition:
+        transform 150ms ease,
+        background-color 150ms ease,
+        border-color 150ms ease;
+}
+
+.control-button:hover {
+    transform: scale(1.07);
+    background: #1286df;
+    border-color: white;
+}
+
+.control-button:active {
+    transform: scale(0.96);
+}
+
+.control-button:focus-visible {
+    outline: 4px solid white;
+    outline-offset: 4px;
+}
+
+.control-button.disabled {
+    background: #d8384f;
+}
+
+.control-button.disabled:hover {
+    background: #ed4960;
+}
+
+.control-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.control-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+@media (max-width: 600px) {
+    .video-page {
+        padding: 12px;
+    }
+
+    .video-container {
+        border-radius: 20px;
+    }
+
+    .controls {
+        bottom: 18px;
+        gap: 20px;
+    }
+
+    .control-button {
+        width: 86px;
+        height: 86px;
+    }
+
+    .control-icon {
+        font-size: 1.6rem;
+    }
+
+    .control-label {
+        font-size: 0.8rem;
+    }
+}
