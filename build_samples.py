@@ -106,15 +106,27 @@ def build_samples():
             
         test.append(conversation)
         
+    train_structured = []
+    
+    for sample in train:
+        train_structured.append({"messages": sample})
+    
+    test_structured = []
+    
+    for sample in test:
+        test_structured.append({"messages": sample})
+        
     out_path = Path(__file__).resolve().parents[0] / "samples"
     out_path.mkdir(parents=True, exist_ok=True)
     
     with open(out_path / "train.json", "w") as con:
-        json.dump(train, con)
+        json.dump(train_structured, con)
     with open(out_path / "test.json", "w") as con:
-        json.dump(test, con)
+        json.dump(test_structured, con)
     
     print("samples complete")
+    
+    
     
     if get_token() is not None:
         api = HfApi()

@@ -1,8 +1,8 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from huggingface_hub import snapshot_download
+from huggingface_hub import get_token
+from datasets import load_dataset
 from pathlib import Path
-import json
-from sft import SFTConfig, SFTTrainer
+from trl import SFTConfig, SFTTrainer
 from peft import LoraConfig
 
 def fine_tune():
@@ -11,30 +11,15 @@ def fine_tune():
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(model_name)
     
-    samples = Path(snapshot_download(
-        repo_id="Carson-Shively/ai-math-tutor",
-        repo_type="dataset"
-    ))
-    
-    with open(samples / "train.json", "r") as con:
-        train = json.load(con)
-    with open(samples / "test.json", "r") as con:
-        test = json.load(con)
-        
-    train_structured = []
-    
-    for sample in train:
-        train_structured.append({"messages": sample})
-    
-    test_structured = []
-    
-    for sample in test:
-        test_structured.append({"messages": sample})
+    dataset = load_dataset("Carson-Shively/ai-math-tutor")
+
+    train = dataset["train"]
+    test = dataset["test"]
     
     out_path = Path("/kaggle/working/model")
 
     lora_config = LoraConfig(
-        task_type="CASUAL_LM",
+        task_type="CAUSAL_LM",
         r=16,
         lora_alpha=32,
         lora_dropout=0.05,
@@ -62,3 +47,21 @@ def fine_tune():
         assistant_only_loss=True
     )
     
+    trainer = SFTTrainer(
+        model=model,
+        args=fine_tuning_config,
+        peft_config=lora_config,
+        processing_class=tokenizer,
+        train_dataset=train,
+        eval_dataset=test
+    )
+    
+    trainer.train()
+    
+    trainer.save_model()
+    
+    if get_token() is not None:
+        trainer.push_to_hub("Carson-Shively/ai-math-tutor")
+    
+if __name__ == "__main__":
+    fine_tune()
