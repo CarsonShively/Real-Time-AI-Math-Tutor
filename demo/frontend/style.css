@@ -23,40 +23,57 @@ body {
 
 .video-page {
     min-height: 100dvh;
+
     display: flex;
     align-items: center;
     justify-content: center;
+
     padding: 24px;
 }
 
 .video-container {
     position: relative;
+
     width: min(100%, 1000px);
     aspect-ratio: 16 / 9;
+
     overflow: hidden;
+
     border: 3px solid rgba(255, 255, 255, 0.35);
     border-radius: 28px;
+
     background: #03152d;
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.4);
+
+    box-shadow:
+        0 24px 70px rgba(0, 0, 0, 0.4);
 }
 
 #camera {
     width: 100%;
     height: 100%;
+
     display: block;
+
     object-fit: cover;
 }
 
 .camera-off-message {
     position: absolute;
     inset: 0;
-    z-index: 5;
+    z-index: 20;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
+    padding: 24px;
+
     background: #03152d;
+
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
 }
 
 .hidden {
@@ -79,17 +96,22 @@ body {
 .voice-control label {
     font-size: 0.8rem;
     font-weight: 600;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+
+    text-shadow:
+        0 1px 4px rgba(0, 0, 0, 0.7);
 }
 
 #voice-select {
     width: 100%;
+
     padding: 9px 12px;
 
-    border: 1px solid rgba(255, 255, 255, 0.55);
+    border:
+        1px solid rgba(255, 255, 255, 0.55);
     border-radius: 10px;
 
-    background: rgba(3, 21, 45, 0.88);
+    background:
+        rgba(3, 21, 45, 0.88);
     color: white;
 
     font: inherit;
@@ -114,43 +136,57 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 28px;
 }
 
 .control-button {
-    width: 110px;
-    height: 110px;
+    width: 120px;
+    height: 120px;
+
     padding: 0;
 
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
 
-    border: 2px solid rgba(255, 255, 255, 0.55);
+    border:
+        2px solid rgba(255, 255, 255, 0.65);
     border-radius: 50%;
 
-    background: rgba(9, 104, 190, 0.9);
+    background:
+        rgba(9, 104, 190, 0.92);
     color: white;
 
     cursor: pointer;
+
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+
     backdrop-filter: blur(12px);
 
     transition:
         transform 150ms ease,
         background-color 150ms ease,
-        border-color 150ms ease;
+        border-color 150ms ease,
+        opacity 150ms ease;
 }
 
 .control-button:hover {
     transform: scale(1.07);
+
     background: #1286df;
     border-color: white;
 }
 
-.control-button:active {
-    transform: scale(0.96);
+.control-button:active,
+.control-button.active {
+    transform: scale(0.94);
+
+    background: #d8384f;
+    border-color: white;
 }
 
 .control-button:focus-visible {
@@ -158,38 +194,51 @@ body {
     outline-offset: 4px;
 }
 
+.control-button:disabled,
 .control-button.disabled {
-    background: #d8384f;
+    opacity: 0.7;
+    cursor: not-allowed;
+
+    background: #59697c;
 }
 
+.control-button:disabled:hover,
 .control-button.disabled:hover {
-    background: #ed4960;
+    transform: none;
+    background: #59697c;
 }
 
 .control-icon {
-    font-size: 2rem;
+    font-size: 2.2rem;
     line-height: 1;
 }
 
 .control-label {
-    font-size: 0.9rem;
+    max-width: 90px;
+
+    font-size: 0.85rem;
     font-weight: 600;
+    line-height: 1.15;
+    text-align: center;
 }
 
 @media (max-width: 600px) {
     .video-page {
         width: 100%;
         min-height: 100dvh;
+
         padding: 0;
     }
 
     .video-container {
         width: 100%;
         height: 100dvh;
+
         aspect-ratio: auto;
 
         border: 0;
         border-radius: 0;
+
         box-shadow: none;
     }
 
@@ -199,7 +248,9 @@ body {
             env(safe-area-inset-top)
         );
         right: 12px;
-        width: min(190px, calc(100% - 24px));
+
+        width:
+            min(190px, calc(100% - 24px));
     }
 
     .voice-control label {
@@ -213,19 +264,18 @@ body {
 
     .controls {
         bottom: max(
-            18px,
+            22px,
             env(safe-area-inset-bottom)
         );
-        gap: 20px;
     }
 
     .control-button {
-        width: 86px;
-        height: 86px;
+        width: 104px;
+        height: 104px;
     }
 
     .control-icon {
-        font-size: 1.6rem;
+        font-size: 1.9rem;
     }
 
     .control-label {

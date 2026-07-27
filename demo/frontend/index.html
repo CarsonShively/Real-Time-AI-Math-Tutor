@@ -34,7 +34,8 @@
             <div
                 id="camera-off-message"
                 class="camera-off-message hidden"
-                aria-hidden="true"
+                role="alert"
+                aria-live="polite"
             ></div>
 
             <div class="voice-control">
@@ -57,12 +58,13 @@
                     id="microphone-button"
                     class="control-button"
                     type="button"
-                    aria-label="Mute microphone"
+                    aria-label="Hold to speak"
                     aria-pressed="false"
                 >
                     <span
                         id="microphone-icon"
                         class="control-icon"
+                        aria-hidden="true"
                     >
                         🎤
                     </span>
@@ -71,29 +73,7 @@
                         id="microphone-label"
                         class="control-label"
                     >
-                        Mute
-                    </span>
-                </button>
-
-                <button
-                    id="camera-button"
-                    class="control-button"
-                    type="button"
-                    aria-label="Turn camera off"
-                    aria-pressed="false"
-                >
-                    <span
-                        id="camera-icon"
-                        class="control-icon"
-                    >
-                        📹
-                    </span>
-
-                    <span
-                        id="camera-label"
-                        class="control-label"
-                    >
-                        Video
+                        Hold to speak
                     </span>
                 </button>
             </div>

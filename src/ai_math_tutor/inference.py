@@ -42,7 +42,10 @@ class Inference():
     
     def user_work(self, image_bytes):
         image = Image.open(BytesIO(image_bytes)).convert("RGB")
-        work = self.work_model(image)
+        work = self.work_model({
+            "images": image,
+            "text": "Extract and transcribe all mathematical work shown in this image."
+        })
         print(work)
         return work
         
