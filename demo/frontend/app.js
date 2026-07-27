@@ -57,7 +57,11 @@ const IMAGE_CAPTURE_DELAY_MS = 500;
 async function startMedia() {
     try {
         currentStream = await navigator.mediaDevices.getUserMedia({
-            video: true,
+            video: {
+                facingMode: {
+                    ideal: "environment",
+                },
+            },
             audio: true,
         });
 
