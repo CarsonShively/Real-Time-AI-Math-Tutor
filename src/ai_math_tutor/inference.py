@@ -1,4 +1,4 @@
-from transformers import AutoTokenizer, pipeline, AutoProcessor, Qwen2_5_VLForConditionalGeneration
+from transformers import AutoTokenizer, pipeline, AutoProcessor, AutoModelForImageTextToText
 import torch
 from peft import AutoPeftModelForCausalLM
 from PIL import Image
@@ -15,7 +15,7 @@ class Inference():
         
         self.work_processor = AutoProcessor.from_pretrained(user_work_model)
         
-        self.work_model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        self.work_model = AutoModelForImageTextToText.from_pretrained(
             user_work_model,
             dtype=torch.float16
         ).to("cuda:1")
@@ -45,32 +45,36 @@ class Inference():
     def user_work(self, image_bytes):
         image = Image.open(BytesIO(image_bytes)).convert("RGB")
         
-        message = [
+        messages = [
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "image",
-                        "image": image,
                     },
                     {
                         "type": "text",
-                        "text": ("Extract and transcribe all mathematical work shown in this image."
+                        "text": (
+                            "Extract and transcribe all mathematical work shown "
+                            "in this image. Preserve equations using LaTeX."
                         ),
                     },
                 ],
             }
         ]
         
-        work_input = self.work_processor.apply_chat_template(
-            message,
-            tokenize=True,
-            add_generation_prompt=True,
-            return_dict=True,
-            return_tensors="pt"
+        prompt = self.work_processor.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True
         )
 
-        work_input = work_input.to("cuda:1")
+        work_input = self.work_processor(
+            text=[prompt],
+            images=[image],
+            padding=True,
+            return_tensors="pt"
+        ).to("cuda:1")
         
         with torch.inference_mode():
             work_ids = self.work_model.generate(**work_input, max_new_tokens=256, do_sample=False)
@@ -78,7 +82,7 @@ class Inference():
         prompt_len = work_input["input_ids"].shape[1]
         work_ids = work_ids[:, prompt_len:]
             
-        work = self.work_processor.batch_decode(work_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
+        work = self.work_processor.batch_decode(work_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
         print(work)
         return work
         
