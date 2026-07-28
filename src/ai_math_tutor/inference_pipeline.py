@@ -1,17 +1,17 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM, AutoProcessor, Qwen2VLForConditionalGeneration, Pipeline
+from transformers import AutoProcessor, Qwen2VLForConditionalGeneration, pipeline, AutoModelForMultimodalLM
 import torch
 from ai_math_tutor.rules import EXTRACTION_RULES, REASONING_RULES, TUTOR_RULES, QUESTION_RULES
 import json
 from kokoro import KPipeline
 import numpy as np
 
-class Pipeline:
+class InferencePipeline:
     def __init__(self):
         EXTRACTION = "prithivMLmods/Imgscope-OCR-2B-0527"
         REASONING_AND_TUTOR = "Qwen/Qwen3.5-4B"
         QUESTION = "openai/whisper-base.en"
         
-        self.question_model = Pipeline(
+        self.question_model = pipeline(
             task="automatic-speech-recognition",
             model=QUESTION,
             device=0,
@@ -22,8 +22,8 @@ class Pipeline:
         self.extraction_model = Qwen2VLForConditionalGeneration.from_pretrained(EXTRACTION, dtype=torch.float16).to("cuda:0")
         self.extraction_model.eval()
 
-        self.reasoning_and_tutor_tokenizer = AutoTokenizer.from_pretrained(REASONING_AND_TUTOR)
-        self.reasoning_and_tutor_model = AutoModelForCausalLM.from_pretrained(REASONING_AND_TUTOR, dtype=torch.float16).to("cuda:1")
+        self.reasoning_and_tutor_processor = AutoProcessor.from_pretrained(REASONING_AND_TUTOR)
+        self.reasoning_and_tutor_model = AutoModelForMultimodalLM.from_pretrained(REASONING_AND_TUTOR, dtype=torch.float16).to("cuda:1")
         self.reasoning_and_tutor_model.eval()
 
         self.tutor_speech_model = KPipeline(lang_code="a")
@@ -58,12 +58,12 @@ class Pipeline:
         ).to("cuda:0")
 
         with torch.inference_mode():
-            input_plus_extracted = self.extraction_model(**processed_dict, max_new_tokens=512, do_sample=False)
+            input_plus_extracted = self.extraction_model.generate(**processed_dict, max_new_tokens=512, do_sample=False)
         
         input_len = processed_dict["input_ids"].shape[1]
         extracted_only = input_plus_extracted[:, input_len:]
 
-        decoded_extract = self.extraction_processor.batch_decode(extracted_only, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+        decoded_extract = self.extraction_processor.batch_decode(extracted_only, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
 
         extracted_math = json.loads(decoded_extract)
         print(f"========== EXTRACTION RESULT ==========\n\n{json.dumps(extracted_math, ensure_ascii=False, indent=2)}\n\n=======================================")
@@ -81,7 +81,7 @@ class Pipeline:
             }
         ]
 
-        tokens_dict = self.reasoning_and_tutor_tokenizer.apply_chat_template(
+        tokens_dict = self.reasoning_and_tutor_processor.apply_chat_template(
             message,
             tokenize=True,
             return_dict=True,
@@ -90,23 +90,19 @@ class Pipeline:
         ).to("cuda:1")
 
         with torch.inference_mode():
-            input_plus_response = self.reasoning_and_tutor_model(**tokens_dict, max_new_tokens=512, do_sample=False)
+            input_plus_response = self.reasoning_and_tutor_model.generate(**tokens_dict, max_new_tokens=512, do_sample=False)
 
         input_len = tokens_dict["input_ids"].shape[1]
         reasoning_tokens = input_plus_response[:, input_len:]
 
-        decoded_reasoning = self.reasoning_and_tutor_tokenizer.batch_decode(reasoning_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+        decoded_reasoning = self.reasoning_and_tutor_processor.batch_decode(reasoning_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
 
         reasoning = json.loads(decoded_reasoning)
         print(f"========== REASONING RESULT ==========\n\n{json.dumps(reasoning, ensure_ascii=False, indent=2)}\n\n=======================================")
         return reasoning
 
     def question_layer(self, audio):
-        waveform = {
-            "array": audio,
-            "sampling_rate": 16000
-        }
-        transcript = self.question_model(waveform)["text"].strip()
+        transcript = self.question_model(audio)["text"].strip()
 
         message = [
             {
@@ -119,7 +115,7 @@ class Pipeline:
             }
         ]
         
-        tokens_dict = self.reasoning_and_tutor_tokenizer.apply_chat_template(
+        tokens_dict = self.reasoning_and_tutor_processor.apply_chat_template(
             message,
             tokenize=True,
             return_dict=True,
@@ -128,12 +124,12 @@ class Pipeline:
         ).to("cuda:1")
 
         with torch.inference_mode():
-            input_plus_response = self.reasoning_and_tutor_model(**tokens_dict, max_new_tokens=512, do_sample=False)
+            input_plus_response = self.reasoning_and_tutor_model.generate(**tokens_dict, max_new_tokens=512, do_sample=False)
 
         input_len = tokens_dict["input_ids"].shape[1]
         question_tokens = input_plus_response[:, input_len:]
 
-        decoded_question = self.reasoning_and_tutor_tokenizer.batch_decode(question_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+        decoded_question = self.reasoning_and_tutor_processor.batch_decode(question_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
 
         question = json.loads(decoded_question)
         print(f"========== QUESTION RESULT ==========\n\n{json.dumps(question, ensure_ascii=False, indent=2)}\n\n=======================================")
@@ -149,7 +145,7 @@ class Pipeline:
         
         message.extend(conversation)
         
-        conversation_dict = self.reasoning_and_tutor_tokenizer.apply_chat_template(
+        conversation_dict = self.reasoning_and_tutor_processor.apply_chat_template(
             message,
             tokenize=True,
             add_generation_prompt=True,
@@ -158,15 +154,15 @@ class Pipeline:
         ).to("cuda:1")
 
         with torch.inference_mode():
-            conversation_plus_response = self.reasoning_and_tutor_model(**conversation_dict, max_new_tokens=256, do_sample=False)
+            conversation_plus_response = self.reasoning_and_tutor_model.generate(**conversation_dict, max_new_tokens=256, do_sample=False)
 
         conversation_length = conversation_dict["input_ids"].shape[1]
         tutoring_tokens = conversation_plus_response[:, conversation_length:]
 
-        decoded_tutoring = self.tokenizer.batch_decode(tutoring_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)
+        tutoring = self.reasoning_and_tutor_processor.batch_decode(tutoring_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
 
-        tutoring = json.load(decoded_tutoring)
-        print(f"========== TUTORING RESULT ==========\n\n{json.dumps(tutoring, ensure_ascii=False, indent=2)}\n\n=======================================")
+
+        print(f"========== TUTORING RESULT ==========\n\n{tutoring}\n\n=======================================")
         return tutoring
     
     def speak_layer(self, tutoring):

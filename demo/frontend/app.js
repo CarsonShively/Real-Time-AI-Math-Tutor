@@ -2,50 +2,67 @@ const video = document.getElementById("camera");
 const canvas = document.getElementById("capture-canvas");
 const canvasContext = canvas.getContext("2d");
 
-const microphoneButton = document.getElementById(
-    "microphone-button"
+const cameraAudioButton = document.getElementById(
+    "camera-audio-button"
 );
 
-const cameraButton = document.getElementById(
-    "camera-button"
+const audioOnlyButton = document.getElementById(
+    "audio-only-button"
 );
 
-const voiceSelect = document.getElementById(
-    "voice-select"
-);
-
-const microphoneIcon = document.getElementById(
-    "microphone-icon"
-);
-
-const microphoneLabel = document.getElementById(
-    "microphone-label"
+const checkpointText = document.getElementById(
+    "checkpoint-text"
 );
 
 const cameraOffMessage = document.getElementById(
     "camera-off-message"
 );
 
-let currentStream = null;
+const whiteboardButton = document.getElementById(
+    "whiteboard-button"
+);
 
-// Recording state
+const whiteboardOverlay = document.getElementById(
+    "whiteboard-overlay"
+);
+
+const whiteboardPanel = document.getElementById(
+    "whiteboard-panel"
+);
+
+const whiteboardCloseButton = document.getElementById(
+    "whiteboard-close-button"
+);
+
+const correctStepsElement = document.getElementById(
+    "correct-steps"
+);
+
+const incorrectStepElement = document.getElementById(
+    "incorrect-step"
+);
+
+const tutorResponseElement = document.getElementById(
+    "tutor-response"
+);
+
+const IMAGE_CAPTURE_DELAY_MS = 1000;
+
+let currentStream = null;
 let mediaRecorder = null;
 let audioChunks = [];
+
 let isRecording = false;
-let recordingPointerId = null;
-
-// Capture state
-let capturedImageBlob = null;
-let imageCapturePromise = null;
-let imageCaptureTimer = null;
-
-// Request state
 let inferenceInProgress = false;
+let whiteboardOpen = false;
 
-// Text-to-speech state
-let availableVoices = [];
+let activeButton = null;
+let activePointerId = null;
+let includeImageForTurn = false;
 
-const IMAGE_CAPTURE_DELAY_MS = 500;
+let imageCaptureTimer = null;
+let imageCapturePromise = null;
+let capturedImageBlob = null;
 
 async function startMedia() {
     try {
@@ -59,15 +76,6 @@ async function startMedia() {
                 audio: true,
             });
 
-        const videoTracks =
-            currentStream.getVideoTracks();
-
-        videoTracks.forEach((track) => {
-            track.enabled = true;
-        });
-
-        // The microphone is enabled only while the
-        // microphone button is being held.
         const audioTracks =
             currentStream.getAudioTracks();
 
@@ -80,13 +88,7 @@ async function startMedia() {
 
         cameraOffMessage.classList.add("hidden");
 
-        // The camera is always on, so the camera
-        // toggle is not needed.
-        if (cameraButton) {
-            cameraButton.hidden = true;
-        }
-
-        updateMicrophoneButton(false);
+        updateButtons();
     } catch (error) {
         console.error(
             "Could not access camera or microphone:",
@@ -100,7 +102,7 @@ async function startMedia() {
     }
 }
 
-function beginPressToTalk(event) {
+function beginHold(event, includeImage) {
     if (
         !currentStream ||
         isRecording ||
@@ -109,25 +111,29 @@ function beginPressToTalk(event) {
         return;
     }
 
+    if (includeImage && whiteboardOpen) {
+        return;
+    }
+
     event.preventDefault();
 
-    recordingPointerId = event.pointerId;
+    activeButton = event.currentTarget;
+    activePointerId = event.pointerId;
+    includeImageForTurn = includeImage;
 
-    microphoneButton.setPointerCapture(
-        recordingPointerId
-    );
+    activeButton.setPointerCapture(activePointerId);
 
-    startAudioRecording();
+    startRecording();
 }
 
-function endPressToTalk(event) {
+function endHold(event) {
     if (!isRecording) {
         return;
     }
 
     if (
-        recordingPointerId !== null &&
-        event.pointerId !== recordingPointerId
+        activePointerId !== null &&
+        event.pointerId !== activePointerId
     ) {
         return;
     }
@@ -135,22 +141,23 @@ function endPressToTalk(event) {
     event.preventDefault();
 
     if (
-        recordingPointerId !== null &&
-        microphoneButton.hasPointerCapture(
-            recordingPointerId
+        activeButton &&
+        activePointerId !== null &&
+        activeButton.hasPointerCapture(
+            activePointerId
         )
     ) {
-        microphoneButton.releasePointerCapture(
-            recordingPointerId
+        activeButton.releasePointerCapture(
+            activePointerId
         );
     }
 
-    recordingPointerId = null;
+    activePointerId = null;
 
-    stopAudioRecording();
+    stopRecording();
 }
 
-function startAudioRecording() {
+function startRecording() {
     const audioTracks =
         currentStream.getAudioTracks();
 
@@ -158,7 +165,6 @@ function startAudioRecording() {
         console.error(
             "No microphone track is available."
         );
-
         return;
     }
 
@@ -190,7 +196,8 @@ function startAudioRecording() {
     imageCapturePromise = null;
     isRecording = true;
 
-    updateMicrophoneButton(true);
+    setCheckpoint("Listening");
+    updateButtons();
 
     mediaRecorder.addEventListener(
         "dataavailable",
@@ -211,16 +218,17 @@ function startAudioRecording() {
 
     mediaRecorder.start();
 
-    imageCaptureTimer = setTimeout(() => {
-        if (isRecording) {
-            imageCapturePromise = captureImage();
-        }
-    }, IMAGE_CAPTURE_DELAY_MS);
-
-    console.log("Recording started");
+    if (includeImageForTurn) {
+        imageCaptureTimer = setTimeout(() => {
+            if (isRecording) {
+                imageCapturePromise =
+                    captureImage();
+            }
+        }, IMAGE_CAPTURE_DELAY_MS);
+    }
 }
 
-function stopAudioRecording() {
+function stopRecording() {
     if (!isRecording) {
         return;
     }
@@ -233,10 +241,13 @@ function stopAudioRecording() {
     }
 
     /*
-     * For a short button press, the delayed capture
-     * may not have happened yet. Capture an image now.
+     * If the user releases before one second,
+     * take the silent image when the hold ends.
      */
-    if (!imageCapturePromise) {
+    if (
+        includeImageForTurn &&
+        !imageCapturePromise
+    ) {
         imageCapturePromise = captureImage();
     }
 
@@ -247,9 +258,7 @@ function stopAudioRecording() {
         mediaRecorder.stop();
     }
 
-    updateMicrophoneButton(false);
-
-    console.log("Recording stopped");
+    updateButtons();
 }
 
 async function handleRecordingStopped() {
@@ -262,8 +271,6 @@ async function handleRecordingStopped() {
             type: mimeType,
         });
 
-    audioChunks = [];
-
     const audioTracks =
         currentStream?.getAudioTracks() ?? [];
 
@@ -271,37 +278,38 @@ async function handleRecordingStopped() {
         track.enabled = false;
     });
 
-    const imageBlob =
-        imageCapturePromise
+    let imageBlob = null;
+
+    if (includeImageForTurn) {
+        imageBlob = imageCapturePromise
             ? await imageCapturePromise
             : capturedImageBlob;
+    }
 
+    audioChunks = [];
     imageCapturePromise = null;
     capturedImageBlob = null;
     mediaRecorder = null;
+    activeButton = null;
+    activePointerId = null;
 
     if (recordedAudioBlob.size === 0) {
         console.error(
             "The recorded audio was empty."
         );
 
+        setCheckpoint("");
+        updateButtons();
         return;
     }
 
-    console.log(
-        "Recorded audio:",
-        recordedAudioBlob
-    );
-
-    console.log(
-        "Captured image:",
-        imageBlob
-    );
-
     await handleCompletedTurn(
         recordedAudioBlob,
-        imageBlob
+        imageBlob,
+        includeImageForTurn
     );
+
+    includeImageForTurn = false;
 }
 
 function captureImage() {
@@ -342,12 +350,6 @@ function captureImage() {
                 }
 
                 capturedImageBlob = blob;
-
-                console.log(
-                    "Silent image captured:",
-                    capturedImageBlob
-                );
-
                 resolve(blob);
             },
             "image/jpeg",
@@ -358,14 +360,15 @@ function captureImage() {
 
 async function handleCompletedTurn(
     audioBlob,
-    imageBlob
+    imageBlob,
+    includedImage
 ) {
     if (inferenceInProgress) {
         return;
     }
 
     inferenceInProgress = true;
-    updateMicrophoneButton(false);
+    updateButtons();
 
     const formData = new FormData();
 
@@ -375,7 +378,7 @@ async function handleCompletedTurn(
         "speech.webm"
     );
 
-    if (imageBlob) {
+    if (includedImage && imageBlob) {
         formData.append(
             "image",
             imageBlob,
@@ -385,7 +388,7 @@ async function handleCompletedTurn(
 
     try {
         const response = await fetch(
-            "/inference",
+            "/stream_pipeline",
             {
                 method: "POST",
                 body: formData,
@@ -402,233 +405,484 @@ async function handleCompletedTurn(
             );
         }
 
-        const result = await response.json();
-
-        console.log(
-            "Tutor response:",
-            result.response
+        await readCheckpointStream(
+            response,
+            includedImage
         );
-
-        speakResponse(result.response);
     } catch (error) {
         console.error(
             "Could not complete tutor turn:",
             error
         );
+
+        setCheckpoint("Error");
     } finally {
         inferenceInProgress = false;
-        updateMicrophoneButton(false);
+        updateButtons();
     }
 }
 
-function updateMicrophoneButton(recording) {
-    microphoneButton.classList.toggle(
-        "active",
-        recording
+async function readCheckpointStream(
+    response,
+    includedImage
+) {
+    if (!response.body) {
+        throw new Error(
+            "The response did not contain a stream."
+        );
+    }
+
+    const reader =
+        response.body.getReader();
+
+    const decoder = new TextDecoder();
+
+    let pendingText = "";
+    let tutorResponse = null;
+    let showUrl = "/show";
+    let speakUrl = "/speak";
+
+    while (true) {
+        const {
+            value,
+            done,
+        } = await reader.read();
+
+        pendingText += decoder.decode(
+            value || new Uint8Array(),
+            {
+                stream: !done,
+            }
+        );
+
+        const lines = pendingText.split("\n");
+        pendingText = lines.pop() ?? "";
+
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+
+            if (!trimmedLine) {
+                continue;
+            }
+
+            const event = JSON.parse(
+                trimmedLine
+            );
+
+            if (event.checkpoint) {
+                setCheckpoint(
+                    formatCheckpoint(
+                        event.checkpoint
+                    )
+                );
+            }
+
+            tutorResponse =
+                event.tutor_response ??
+                event.response ??
+                event.tutoring ??
+                tutorResponse;
+
+            showUrl =
+                event.show_url ?? showUrl;
+
+            speakUrl =
+                event.speak_url ?? speakUrl;
+        }
+
+        if (done) {
+            break;
+        }
+    }
+
+    const finalLine = pendingText.trim();
+
+    if (finalLine) {
+        const event = JSON.parse(finalLine);
+
+        if (event.checkpoint) {
+            setCheckpoint(
+                formatCheckpoint(
+                    event.checkpoint
+                )
+            );
+        }
+
+        tutorResponse =
+            event.tutor_response ??
+            event.response ??
+            event.tutoring ??
+            tutorResponse;
+
+        showUrl =
+            event.show_url ?? showUrl;
+
+        speakUrl =
+            event.speak_url ?? speakUrl;
+    }
+
+    await updateWhiteboard(
+        includedImage,
+        tutorResponse,
+        showUrl
     );
 
-    microphoneButton.classList.toggle(
-        "disabled",
-        inferenceInProgress
+    await playTutorAudio(speakUrl);
+
+    setCheckpoint("");
+}
+
+async function updateWhiteboard(
+    includedImage,
+    tutorResponse,
+    showUrl
+) {
+    /*
+     * For an audio-only turn, preserve the existing
+     * steps and incorrect step. Only update the
+     * tutor response.
+     */
+    if (includedImage) {
+        try {
+            const response = await fetch(
+                showUrl,
+                {
+                    cache: "no-store",
+                }
+            );
+
+            if (response.ok) {
+                const data =
+                    await response.json();
+
+                const show =
+                    data.show ?? data;
+
+                renderCorrectSteps(
+                    show?.correct_steps
+                );
+
+                renderIncorrectStep(
+                    show?.first_user_incorrect_step
+                );
+
+                tutorResponse =
+                    show?.tutor_response ??
+                    show?.response ??
+                    tutorResponse;
+            }
+        } catch (error) {
+            console.error(
+                "Could not update whiteboard work:",
+                error
+            );
+        }
+    }
+
+    if (typeof tutorResponse === "string") {
+        tutorResponseElement.textContent =
+            tutorResponse;
+    }
+}
+
+function renderCorrectSteps(steps) {
+    correctStepsElement.innerHTML = "";
+
+    if (!Array.isArray(steps)) {
+        if (typeof steps === "string") {
+            correctStepsElement.textContent =
+                steps;
+        }
+
+        return;
+    }
+
+    for (const step of steps) {
+        const stepElement =
+            document.createElement("div");
+
+        stepElement.className =
+            "whiteboard-step";
+
+        stepElement.textContent =
+            String(step);
+
+        correctStepsElement.appendChild(
+            stepElement
+        );
+    }
+}
+
+function renderIncorrectStep(step) {
+    if (
+        step === null ||
+        step === undefined ||
+        step === ""
+    ) {
+        incorrectStepElement.textContent =
+            "No incorrect step found.";
+        return;
+    }
+
+    incorrectStepElement.textContent =
+        String(step);
+}
+
+async function playTutorAudio(
+    speakUrl = "/speak"
+) {
+    try {
+        const response = await fetch(
+            speakUrl,
+            {
+                cache: "no-store",
+            }
+        );
+
+        if (!response.ok) {
+            const errorText =
+                await response.text();
+
+            throw new Error(
+                `Speech request failed: ` +
+                `${response.status} ${errorText}`
+            );
+        }
+
+        const audioBlob =
+            await response.blob();
+
+        const audioUrl =
+            URL.createObjectURL(audioBlob);
+
+        const audio = new Audio(audioUrl);
+
+        audio.addEventListener(
+            "ended",
+            () => {
+                URL.revokeObjectURL(audioUrl);
+            },
+            {
+                once: true,
+            }
+        );
+
+        audio.addEventListener(
+            "error",
+            () => {
+                URL.revokeObjectURL(audioUrl);
+            },
+            {
+                once: true,
+            }
+        );
+
+        await audio.play();
+    } catch (error) {
+        console.error(
+            "Could not play tutor audio:",
+            error
+        );
+    }
+}
+
+function formatCheckpoint(checkpoint) {
+    const normalized =
+        String(checkpoint)
+            .trim()
+            .toLowerCase();
+
+    const labels = {
+        listening: "Listening",
+        extracting: "Extracting",
+        reasoning: "Reasoning",
+        formatting: "Formatting",
+        tutoring: "Tutoring",
+        speaking: "Speaking",
+        complete: "Complete",
+    };
+
+    return labels[normalized] ??
+        normalized.charAt(0).toUpperCase() +
+        normalized.slice(1);
+}
+
+function setCheckpoint(text) {
+    if (!checkpointText) {
+        return;
+    }
+
+    checkpointText.textContent =
+        text ? `${text}…` : "";
+
+    checkpointText.classList.toggle(
+        "hidden",
+        !text
+    );
+}
+
+function openWhiteboard() {
+    whiteboardOpen = true;
+
+    whiteboardOverlay.classList.remove(
+        "hidden"
     );
 
-    microphoneButton.disabled =
+    whiteboardOverlay.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    updateButtons();
+}
+
+function closeWhiteboard() {
+    whiteboardOpen = false;
+
+    whiteboardOverlay.classList.add(
+        "hidden"
+    );
+
+    whiteboardOverlay.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    updateButtons();
+}
+
+function updateButtons() {
+    const cameraAudioDisabled =
+        inferenceInProgress ||
+        whiteboardOpen;
+
+    const audioOnlyDisabled =
         inferenceInProgress;
 
-    microphoneButton.setAttribute(
+    cameraAudioButton.disabled =
+        cameraAudioDisabled;
+
+    audioOnlyButton.disabled =
+        audioOnlyDisabled;
+
+    cameraAudioButton.classList.toggle(
+        "disabled",
+        cameraAudioDisabled
+    );
+
+    audioOnlyButton.classList.toggle(
+        "disabled",
+        audioOnlyDisabled
+    );
+
+    cameraAudioButton.classList.toggle(
+        "active",
+        isRecording &&
+        activeButton === cameraAudioButton
+    );
+
+    audioOnlyButton.classList.toggle(
+        "active",
+        isRecording &&
+        activeButton === audioOnlyButton
+    );
+
+    cameraAudioButton.setAttribute(
         "aria-pressed",
-        String(recording)
+        String(
+            isRecording &&
+            activeButton === cameraAudioButton
+        )
     );
 
-    microphoneButton.setAttribute(
-        "aria-label",
-        recording
-            ? "Release to send"
-            : "Hold to speak"
+    audioOnlyButton.setAttribute(
+        "aria-pressed",
+        String(
+            isRecording &&
+            activeButton === audioOnlyButton
+        )
     );
-
-    microphoneIcon.textContent =
-        recording ? "🔴" : "🎤";
-
-    microphoneLabel.textContent =
-        inferenceInProgress
-            ? "Thinking..."
-            : recording
-                ? "Release to send"
-                : "Hold to speak";
 }
 
-function loadVoices() {
-    availableVoices =
-        window.speechSynthesis.getVoices();
-
-    voiceSelect.innerHTML = "";
-
-    const englishVoices =
-        availableVoices.filter(
-            (voice) =>
-                voice.lang
-                    .toLowerCase()
-                    .startsWith("en")
-        );
-
-    const voicesToShow =
-        englishVoices.length > 0
-            ? englishVoices
-            : availableVoices;
-
-    if (voicesToShow.length === 0) {
-        const option =
-            document.createElement("option");
-
-        option.value = "";
-        option.textContent =
-            "Default voice";
-
-        voiceSelect.appendChild(option);
-        return;
-    }
-
-    for (const voice of voicesToShow) {
-        const option =
-            document.createElement("option");
-
-        option.value = voice.voiceURI;
-        option.textContent =
-            `${voice.name} (${voice.lang})`;
-
-        if (voice.default) {
-            option.textContent +=
-                " — Default";
+function bindHoldButton(
+    button,
+    includeImage
+) {
+    button.addEventListener(
+        "pointerdown",
+        (event) => {
+            beginHold(event, includeImage);
         }
+    );
 
-        voiceSelect.appendChild(option);
-    }
+    button.addEventListener(
+        "pointerup",
+        endHold
+    );
 
-    const preferredVoice =
-        voicesToShow.find(
-            (voice) =>
-                voice.lang === "en-US" &&
-                /natural|neural|enhanced/i.test(
-                    voice.name
-                )
-        ) ??
-        voicesToShow.find(
-            (voice) =>
-                voice.lang === "en-US"
-        ) ??
-        voicesToShow.find(
-            (voice) => voice.default
-        ) ??
-        voicesToShow[0];
+    button.addEventListener(
+        "pointercancel",
+        endHold
+    );
 
-    voiceSelect.value =
-        preferredVoice.voiceURI;
+    button.addEventListener(
+        "lostpointercapture",
+        (event) => {
+            if (
+                isRecording &&
+                activeButton === button
+            ) {
+                endHold(event);
+            }
+        }
+    );
+
+    button.addEventListener(
+        "contextmenu",
+        (event) => {
+            event.preventDefault();
+        }
+    );
 }
 
-function speakResponse(text) {
-    console.log("Attempting to speak:", text);
+bindHoldButton(
+    cameraAudioButton,
+    true
+);
 
-    if (
-        !text ||
-        !("speechSynthesis" in window)
-    ) {
-        console.error(
-            "Speech synthesis unavailable or text is empty."
-        );
-        return;
-    }
+bindHoldButton(
+    audioOnlyButton,
+    false
+);
 
-    const speech =
-        new SpeechSynthesisUtterance(text);
-
-    const selectedVoice =
-        availableVoices.find(
-            (voice) =>
-                voice.voiceURI ===
-                voiceSelect.value
-        );
-
-    if (selectedVoice) {
-        speech.voice = selectedVoice;
-        speech.lang = selectedVoice.lang;
-    } else {
-        speech.lang = "en-US";
-    }
-
-    speech.rate = 1;
-    speech.pitch = 1;
-    speech.volume = 1;
-
-    speech.onstart = () => {
-        console.log("Speech started");
-    };
-
-    speech.onend = () => {
-        console.log("Speech ended");
-    };
-
-    speech.onerror = (event) => {
-        console.error(
-            "Speech failed:",
-            event.error,
-            event
-        );
-    };
-
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.resume();
-    window.speechSynthesis.speak(speech);
-}
-
-const testVoiceButton =
-    document.getElementById("test-voice-button");
-
-testVoiceButton.addEventListener(
+whiteboardButton.addEventListener(
     "click",
-    () => {
-        speakResponse(
-            "The tutor voice is working."
-        );
-    }
+    openWhiteboard
 );
 
-microphoneButton.addEventListener(
+whiteboardCloseButton.addEventListener(
+    "click",
+    closeWhiteboard
+);
+
+whiteboardOverlay.addEventListener(
     "pointerdown",
-    beginPressToTalk
-);
-
-microphoneButton.addEventListener(
-    "pointerup",
-    endPressToTalk
-);
-
-microphoneButton.addEventListener(
-    "pointercancel",
-    endPressToTalk
-);
-
-microphoneButton.addEventListener(
-    "lostpointercapture",
     (event) => {
-        if (isRecording) {
-            endPressToTalk(event);
+        /*
+         * Close only when the user presses outside
+         * the whiteboard panel.
+         */
+        if (event.target === whiteboardOverlay) {
+            closeWhiteboard();
         }
     }
 );
 
-microphoneButton.addEventListener(
-    "contextmenu",
+whiteboardPanel.addEventListener(
+    "pointerdown",
     (event) => {
-        event.preventDefault();
+        event.stopPropagation();
     }
-);
-
-loadVoices();
-
-window.speechSynthesis.addEventListener(
-    "voiceschanged",
-    loadVoices
 );
 
 startMedia();
