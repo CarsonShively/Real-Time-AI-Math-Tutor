@@ -20,4 +20,6 @@ Requires-Dist: trl<2,>=1.8
 Requires-Dist: peft<0.20,>=0.19
 Requires-Dist: pillow<13,>=12.0
 Requires-Dist: wrapt<2,>=1.16
+Requires-Dist: kokoro<1.0.0,>=0.9.4
+Requires-Dist: soundfile<1.0.0,>=0.14.0
 Dynamic: license-file

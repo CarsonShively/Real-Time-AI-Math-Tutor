@@ -1,7 +1,7 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
-from ai_math_tutor.inference import Inference
+from ai_math_tutor.pipeline import Pipeline
 from fastapi.responses import FileResponse
 from pathlib import Path
 from ai_math_tutor.conversation_state import ConversationState
@@ -10,14 +10,12 @@ from io import BytesIO
 
 @asynccontextmanager
 async def lifespan(app):
-    app.state.inference = Inference()
+    app.state.inference = Pipeline()
     app.state.conversation = ConversationState()
     yield
     
 app = FastAPI(lifespan=lifespan)
-
 frontend_path = Path(__file__).resolve().parents[0] / "frontend"
-
 app.mount("/static", StaticFiles(directory=frontend_path), name="static")
 
 @app.get("/")
