@@ -581,6 +581,18 @@ function speakResponse(text) {
     window.speechSynthesis.speak(speech);
 }
 
+const testVoiceButton =
+    document.getElementById("test-voice-button");
+
+testVoiceButton.addEventListener(
+    "click",
+    () => {
+        speakResponse(
+            "The tutor voice is working."
+        );
+    }
+);
+
 microphoneButton.addEventListener(
     "pointerdown",
     beginPressToTalk
