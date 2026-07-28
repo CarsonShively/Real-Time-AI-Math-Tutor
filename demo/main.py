@@ -39,6 +39,10 @@ async def inference(audio: UploadFile=File(...), image: UploadFile | None=File(d
     
     tutor_response = app.state.inference.inference(app.state.conversation.get_conversation())
     
+    print(tutor_response)
+    
     app.state.conversation.add_tutor_turn(tutor_response)
+    
+    print(app.state.conversation.get_conversation())
     
     return {"response": tutor_response}
