@@ -1,7 +1,7 @@
 LICENSE
 pyproject.toml
 src/ai_math_tutor/conversation_state.py
-src/ai_math_tutor/pipeline.py
+src/ai_math_tutor/inference_pipeline.py
 src/ai_math_tutor/rules.py
 src/real_time_ai_math_tutor.egg-info/PKG-INFO
 src/real_time_ai_math_tutor.egg-info/SOURCES.txt
