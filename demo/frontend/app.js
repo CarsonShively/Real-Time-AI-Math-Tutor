@@ -529,14 +529,12 @@ function loadVoices() {
 function speakResponse(text) {
     console.log("Attempting to speak:", text);
 
-    if (!text) {
-        console.error("No response text was provided.");
-        return;
-    }
-
-    if (!("speechSynthesis" in window)) {
+    if (
+        !text ||
+        !("speechSynthesis" in window)
+    ) {
         console.error(
-            "Speech synthesis is not supported by this browser."
+            "Speech synthesis unavailable or text is empty."
         );
         return;
     }
@@ -544,11 +542,8 @@ function speakResponse(text) {
     const speech =
         new SpeechSynthesisUtterance(text);
 
-    const voices =
-        window.speechSynthesis.getVoices();
-
     const selectedVoice =
-        voices.find(
+        availableVoices.find(
             (voice) =>
                 voice.voiceURI ===
                 voiceSelect.value
@@ -565,21 +560,21 @@ function speakResponse(text) {
     speech.pitch = 1;
     speech.volume = 1;
 
-    speech.addEventListener("start", () => {
+    speech.onstart = () => {
         console.log("Speech started");
-    });
+    };
 
-    speech.addEventListener("end", () => {
-        console.log("Speech finished");
-    });
+    speech.onend = () => {
+        console.log("Speech ended");
+    };
 
-    speech.addEventListener("error", (event) => {
+    speech.onerror = (event) => {
         console.error(
-            "Speech synthesis error:",
+            "Speech failed:",
             event.error,
             event
         );
-    });
+    };
 
     window.speechSynthesis.cancel();
     window.speechSynthesis.resume();
