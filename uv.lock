@@ -642,6 +642,14 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a2/55/8f8cab2afd404cf578136ef2cc5dfb50baa1761b68c9da1fb1e4eed343c9/docopt-0.6.2.tar.gz", hash = "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491", size = 25901, upload-time = "2014-06-16T11:18:57.406Z" }
 
 [[package]]
+name = "en-core-web-sm"
+version = "3.8.0"
+source = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }
+wheels = [
+    { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl", hash = "sha256:1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85" },
+]
+
+[[package]]
 name = "espeakng-loader"
 version = "0.2.4"
 source = { registry = "https://pypi.org/simple" }
@@ -2184,6 +2192,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "datasets" },
+    { name = "en-core-web-sm" },
     { name = "fastapi" },
     { name = "huggingface-hub" },
     { name = "kokoro" },
@@ -2197,6 +2206,7 @@ dependencies = [
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "soundfile" },
+    { name = "spacy" },
     { name = "torch" },
     { name = "transformers" },
     { name = "ultralytics" },
@@ -2207,6 +2217,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "datasets", specifier = ">=4.7,<6" },
+    { name = "en-core-web-sm", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" },
     { name = "fastapi", specifier = ">=0.116,<1" },
     { name = "huggingface-hub", specifier = ">=1.5,<2" },
     { name = "kokoro", specifier = ">=0.9.4,<1.0.0" },
@@ -2218,6 +2229,7 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.7,<1.9" },
     { name = "scipy", specifier = ">=1.11,<2.0" },
     { name = "soundfile", specifier = ">=0.14.0,<1.0.0" },
+    { name = "spacy", specifier = ">=3.8,<4" },
     { name = "torch", specifier = ">=2.7,<3" },
     { name = "transformers", git = "https://github.com/huggingface/transformers.git?rev=main" },
     { name = "ultralytics", specifier = ">=8.4,<8.5" },
