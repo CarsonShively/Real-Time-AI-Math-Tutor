@@ -169,7 +169,7 @@ class Pipeline:
         print(f"========== TUTORING RESULT ==========\n\n{json.dumps(tutoring, ensure_ascii=False, indent=2)}\n\n=======================================")
         return tutoring
     
-    def tutor_speech_layer(self, tutoring):
+    def speak_layer(self, tutoring):
         generator = self.tutor_speech_model(tutoring, voice="af_heart", speed=0.9)
         
         chunks = []
