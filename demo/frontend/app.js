@@ -527,18 +527,28 @@ function loadVoices() {
 }
 
 function speakResponse(text) {
-    if (
-        !text ||
-        !("speechSynthesis" in window)
-    ) {
+    console.log("Attempting to speak:", text);
+
+    if (!text) {
+        console.error("No response text was provided.");
+        return;
+    }
+
+    if (!("speechSynthesis" in window)) {
+        console.error(
+            "Speech synthesis is not supported by this browser."
+        );
         return;
     }
 
     const speech =
         new SpeechSynthesisUtterance(text);
 
+    const voices =
+        window.speechSynthesis.getVoices();
+
     const selectedVoice =
-        availableVoices.find(
+        voices.find(
             (voice) =>
                 voice.voiceURI ===
                 voiceSelect.value
@@ -547,13 +557,32 @@ function speakResponse(text) {
     if (selectedVoice) {
         speech.voice = selectedVoice;
         speech.lang = selectedVoice.lang;
+    } else {
+        speech.lang = "en-US";
     }
 
     speech.rate = 1;
     speech.pitch = 1;
     speech.volume = 1;
 
+    speech.addEventListener("start", () => {
+        console.log("Speech started");
+    });
+
+    speech.addEventListener("end", () => {
+        console.log("Speech finished");
+    });
+
+    speech.addEventListener("error", (event) => {
+        console.error(
+            "Speech synthesis error:",
+            event.error,
+            event
+        );
+    });
+
     window.speechSynthesis.cancel();
+    window.speechSynthesis.resume();
     window.speechSynthesis.speak(speech);
 }
 
