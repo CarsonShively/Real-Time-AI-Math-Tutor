@@ -5,6 +5,8 @@ from ai_math_tutor.inference import Inference
 from fastapi.responses import FileResponse
 from pathlib import Path
 from ai_math_tutor.conversation_state import ConversationState
+from PIL import Image
+from io import BytesIO
 
 @asynccontextmanager
 async def lifespan(app):
@@ -25,11 +27,11 @@ async def home():
 @app.post("/inference")
 async def inference(audio: UploadFile=File(...), image: UploadFile | None=File(default=None)):
     audio_bytes = await audio.read()
+    
     if image is not None:
         image_bytes = await image.read()
+        image = Image.open(BytesIO(image_bytes)).convert("RGB")
         work = app.state.inference.user_work(image_bytes)
-    else:
-        work = ""
         
     user_question = app.state.inference.user_question(audio_bytes)
     
