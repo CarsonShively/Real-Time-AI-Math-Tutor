@@ -1,17 +1,15 @@
 EXTRACTION_RULES = r"""
 Transcribe the handwritten math exactly.
 
-Output one visible line per output line.
-
-Format:
-LINE 1: ...
-LINE 2: ...
-LINE 3: ...
+Output one visible step per output line.
 
 Rules:
-- Never combine separate handwritten lines.
-- Keep digits in the same number together, such as `18`, not `1 8`.
-- Preserve fractions using LaTeX.
+- Never combine separate handwritten steps.
+- Keep multidigit numbers together, such as `18`, not `1 8`.
+- A number written directly above another with a fraction bar is one fraction,
+  not two separate lines. Write it as `\frac{numerator}{denominator}`.
+- Preserve other stacked or vertically aligned math as one expression when it
+  belongs to the same step.
 - Use `[unclear]` instead of guessing.
 - Do not solve, correct, or explain.
 
