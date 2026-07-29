@@ -133,9 +133,12 @@ QUESTION_RULES = """
     - Do not explain anything.
     - Do not remove meaningful words.
     - Remove filler words only when they add no meaning.
-    - Use inline LaTeX with \\(...\\) around each mathematical expression.
-    - Escape LaTeX backslashes correctly for JSON.
+    - Put each mathematical expression inside inline LaTeX delimiters.
+    - In the JSON output, write the delimiters as \\( and \\).
+    - Escape every LaTeX backslash for JSON.
+    - For example, write \\sqrt and \\frac.
     - Return no text outside the JSON object.
+    - Do not use Markdown code fences.
 
     Examples:
 
