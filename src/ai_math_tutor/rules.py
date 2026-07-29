@@ -116,53 +116,38 @@ TUTOR_RULES = """
     - Do not include labels such as "Tutor:", "Hint:", or "Response:".
 """
 
-QUESTION_RULES = """
-    Convert the speech transcript into one clean user question.
+QUESTION_RULES = r"""
+Convert the speech transcript into one clean user question.
 
-    Return valid JSON only in exactly this format:
+Return only valid JSON in this exact format:
 
-    {
-    "user_question": ""
-    }
+{
+  "user_question": ""
+}
 
-    Rules:
-    - Preserve the original word order and meaning.
-    - Keep all normal-language parts of the question.
-    - Convert only spoken mathematical expressions into correct LaTeX.
-    - Do not solve the math.
-    - Do not explain anything.
-    - Do not remove meaningful words.
-    - Remove filler words only when they add no meaning.
-    - Put each mathematical expression inside inline LaTeX delimiters.
-    - In the JSON output, write the delimiters as \\( and \\).
-    - Escape every LaTeX backslash for JSON.
-    - For example, write \\sqrt and \\frac.
-    - Return no text outside the JSON object.
-    - Do not use Markdown code fences.
+Rules:
+- Preserve the question's meaning and normal-language words.
+- Convert spoken math into LaTeX.
+- Do not solve or explain the math.
+- Put each math expression inside \\( and \\).
+- Because this is JSON, every LaTeX backslash must be doubled.
+- Write \\(, \\), \\sqrt, and \\frac exactly like that.
+- Never output \(, \), \sqrt, or \frac with single backslashes.
+- Return no Markdown fences or text outside the JSON.
 
-    Examples:
+Example input:
+"is it fourteen"
 
-    Input:
-    "why does x squared plus three x equal ten"
+Example output:
+{
+  "user_question": "Is it \\(14\\)?"
+}
 
-    Output:
-    {
-    "user_question": "Why does \\(x^2 + 3x = 10\\)?"
-    }
+Example input:
+"how do I simplify square root of sixteen plus two"
 
-    Input:
-    "how do I simplify square root of sixteen plus two"
-
-    Output:
-    {
-    "user_question": "How do I simplify \\(\\sqrt{16} + 2\\)?"
-    }
-
-    Input:
-    "why did I divide x plus four by two here"
-
-    Output:
-    {
-    "user_question": "Why did I divide \\(x + 4\\) by \\(2\\) here?"
-    }
+Example output:
+{
+  "user_question": "How do I simplify \\(\\sqrt{16} + 2\\)?"
+}
 """
