@@ -56,15 +56,6 @@ const tutorResponseElement = document.getElementById(
 
 const IMAGE_CAPTURE_DELAY_MS = 1000;
 
-/*
- * Reuse one Audio object for all tutor responses.
- * It is unlocked when the user clicks Begin.
- */
-const tutorAudio = new Audio();
-tutorAudio.preload = "auto";
-
-let currentTutorAudioUrl = null;
-
 let currentStream = null;
 let mediaRecorder = null;
 let audioChunks = [];
@@ -103,7 +94,9 @@ async function startMedia() {
         video.srcObject = currentStream;
         await video.play();
 
-        cameraOffMessage.classList.add("hidden");
+        cameraOffMessage.classList.add(
+            "hidden"
+        );
 
         updateButtons();
 
@@ -117,7 +110,9 @@ async function startMedia() {
         cameraOffMessage.textContent =
             "Could not access the camera or microphone.";
 
-        cameraOffMessage.classList.remove("hidden");
+        cameraOffMessage.classList.remove(
+            "hidden"
+        );
 
         return false;
     }
@@ -128,6 +123,7 @@ function playGreetingAudio() {
         console.error(
             "Browser text-to-speech is unavailable."
         );
+
         return;
     }
 
@@ -164,40 +160,10 @@ function playGreetingAudio() {
     };
 
     /*
-     * Start speech directly during the user click.
+     * This runs directly during the user's click,
+     * which allows browser speech on mobile.
      */
     window.speechSynthesis.speak(speech);
-}
-
-async function unlockTutorAudio() {
-    /*
-     * A tiny silent WAV used to unlock normal
-     * HTML audio playback on mobile browsers.
-     */
-    tutorAudio.src =
-        "data:audio/wav;base64," +
-        "UklGRiQAAABXQVZFZm10IBAAAAABAAEA" +
-        "QB8AAEAfAAABAAgAZGF0YQAAAAA=";
-
-    tutorAudio.volume = 0;
-
-    try {
-        await tutorAudio.play();
-
-        tutorAudio.pause();
-        tutorAudio.currentTime = 0;
-
-        console.log(
-            "Tutor audio unlocked."
-        );
-    } catch (error) {
-        console.error(
-            "Could not unlock tutor audio:",
-            error
-        );
-    } finally {
-        tutorAudio.volume = 1;
-    }
 }
 
 async function beginTutor() {
@@ -205,6 +171,7 @@ async function beginTutor() {
         console.error(
             "Begin overlay elements were not found."
         );
+
         return;
     }
 
@@ -212,22 +179,25 @@ async function beginTutor() {
     beginButton.textContent = "Starting…";
 
     /*
-     * Start these during the Begin click so mobile
-     * browsers treat them as user initiated.
+     * Speak before the first await so it remains
+     * directly connected to the user's click.
      */
     playGreetingAudio();
-
-    await unlockTutorAudio();
 
     const mediaStarted = await startMedia();
 
     if (!mediaStarted) {
         beginButton.disabled = false;
         beginButton.textContent = "Try Again";
+
         return;
     }
 
     beginOverlay.remove();
+
+    console.log(
+        "Tutor interface started."
+    );
 }
 
 function beginHold(event, includeImage) {
@@ -249,7 +219,9 @@ function beginHold(event, includeImage) {
     activePointerId = event.pointerId;
     includeImageForTurn = includeImage;
 
-    activeButton.setPointerCapture(activePointerId);
+    activeButton.setPointerCapture(
+        activePointerId
+    );
 
     startRecording();
 }
@@ -293,6 +265,7 @@ function startRecording() {
         console.error(
             "No microphone track is available."
         );
+
         return;
     }
 
@@ -347,12 +320,15 @@ function startRecording() {
     mediaRecorder.start();
 
     if (includeImageForTurn) {
-        imageCaptureTimer = setTimeout(() => {
-            if (isRecording) {
-                imageCapturePromise =
-                    captureImage();
-            }
-        }, IMAGE_CAPTURE_DELAY_MS);
+        imageCaptureTimer = setTimeout(
+            () => {
+                if (isRecording) {
+                    imageCapturePromise =
+                        captureImage();
+                }
+            },
+            IMAGE_CAPTURE_DELAY_MS
+        );
     }
 }
 
@@ -368,6 +344,10 @@ function stopRecording() {
         imageCaptureTimer = null;
     }
 
+    /*
+     * If the button is released before the normal
+     * capture delay, capture the image now.
+     */
     if (
         includeImageForTurn &&
         !imageCapturePromise
@@ -396,7 +376,8 @@ async function handleRecordingStopped() {
         });
 
     const audioTracks =
-        currentStream?.getAudioTracks() ?? [];
+        currentStream?.getAudioTracks() ??
+        [];
 
     audioTracks.forEach((track) => {
         track.enabled = false;
@@ -424,6 +405,7 @@ async function handleRecordingStopped() {
 
         setCheckpoint("");
         updateButtons();
+
         return;
     }
 
@@ -474,6 +456,7 @@ function captureImage() {
                 }
 
                 capturedImageBlob = blob;
+
                 resolve(blob);
             },
             "image/jpeg",
@@ -492,6 +475,7 @@ async function handleCompletedTurn(
     }
 
     inferenceInProgress = true;
+
     updateButtons();
 
     const formData = new FormData();
@@ -542,6 +526,7 @@ async function handleCompletedTurn(
         setCheckpoint("Error");
     } finally {
         inferenceInProgress = false;
+
         updateButtons();
     }
 }
@@ -559,7 +544,8 @@ async function readCheckpointStream(
     const reader =
         response.body.getReader();
 
-    const decoder = new TextDecoder();
+    const decoder =
+        new TextDecoder();
 
     let pendingText = "";
     let tutorResponse = null;
@@ -580,19 +566,22 @@ async function readCheckpointStream(
             }
         );
 
-        const lines = pendingText.split("\n");
-        pendingText = lines.pop() ?? "";
+        const lines =
+            pendingText.split("\n");
+
+        pendingText =
+            lines.pop() ?? "";
 
         for (const line of lines) {
-            const trimmedLine = line.trim();
+            const trimmedLine =
+                line.trim();
 
             if (!trimmedLine) {
                 continue;
             }
 
-            const event = JSON.parse(
-                trimmedLine
-            );
+            const event =
+                JSON.parse(trimmedLine);
 
             if (event.checkpoint) {
                 setCheckpoint(
@@ -618,10 +607,12 @@ async function readCheckpointStream(
                 tutorResponse;
 
             showUrl =
-                event.show_url ?? showUrl;
+                event.show_url ??
+                showUrl;
 
             speakUrl =
-                event.speak_url ?? speakUrl;
+                event.speak_url ??
+                speakUrl;
         }
 
         if (done) {
@@ -629,10 +620,12 @@ async function readCheckpointStream(
         }
     }
 
-    const finalLine = pendingText.trim();
+    const finalLine =
+        pendingText.trim();
 
     if (finalLine) {
-        const event = JSON.parse(finalLine);
+        const event =
+            JSON.parse(finalLine);
 
         if (event.checkpoint) {
             setCheckpoint(
@@ -658,10 +651,12 @@ async function readCheckpointStream(
             tutorResponse;
 
         showUrl =
-            event.show_url ?? showUrl;
+            event.show_url ??
+            showUrl;
 
         speakUrl =
-            event.speak_url ?? speakUrl;
+            event.speak_url ??
+            speakUrl;
     }
 
     if (!pipelineComplete) {
@@ -677,7 +672,9 @@ async function readCheckpointStream(
         showUrl
     );
 
-    await playTutorAudio(speakUrl);
+    await playTutorAudio(
+        speakUrl
+    );
 
     setCheckpoint("");
 }
@@ -687,6 +684,10 @@ async function updateWhiteboard(
     tutorResponse,
     showUrl
 ) {
+    /*
+     * Audio-only turns preserve the previous
+     * extracted math display.
+     */
     if (includedImage) {
         try {
             const response = await fetch(
@@ -708,7 +709,8 @@ async function updateWhiteboard(
                 );
 
                 renderIncorrectStep(
-                    show?.first_user_incorrect_step
+                    show
+                        ?.first_user_incorrect_step
                 );
 
                 tutorResponse =
@@ -724,7 +726,10 @@ async function updateWhiteboard(
         }
     }
 
-    if (typeof tutorResponse === "string") {
+    if (
+        typeof tutorResponse ===
+        "string"
+    ) {
         tutorResponseElement.textContent =
             tutorResponse;
     }
@@ -766,6 +771,7 @@ function renderIncorrectStep(step) {
     ) {
         incorrectStepElement.textContent =
             "No incorrect step found.";
+
         return;
     }
 
@@ -776,11 +782,31 @@ function renderIncorrectStep(step) {
 async function playTutorAudio(
     speakUrl = "/speak"
 ) {
+    let audioUrl = null;
+
     try {
+        console.log(
+            "Requesting tutor audio:",
+            speakUrl
+        );
+
         const response = await fetch(
             speakUrl,
             {
                 cache: "no-store",
+            }
+        );
+
+        console.log(
+            "Tutor audio HTTP response:",
+            {
+                status: response.status,
+                statusText:
+                    response.statusText,
+                contentType:
+                    response.headers.get(
+                        "content-type"
+                    ),
             }
         );
 
@@ -790,17 +816,24 @@ async function playTutorAudio(
 
             throw new Error(
                 `Speech request failed: ` +
-                `${response.status} ${errorText}`
+                `${response.status} ` +
+                `${errorText}`
             );
         }
 
         const audioBlob =
             await response.blob();
 
+        /*
+         * A nonzero size confirms that the browser
+         * received the tutor audio response.
+         */
         console.log(
-            "Tutor audio response:",
-            audioBlob.type,
-            audioBlob.size
+            "Tutor audio received:",
+            {
+                type: audioBlob.type,
+                size: audioBlob.size,
+            }
         );
 
         if (audioBlob.size === 0) {
@@ -809,31 +842,54 @@ async function playTutorAudio(
             );
         }
 
-        if (currentTutorAudioUrl) {
-            URL.revokeObjectURL(
-                currentTutorAudioUrl
+        audioUrl =
+            URL.createObjectURL(
+                audioBlob
             );
 
-            currentTutorAudioUrl = null;
-        }
+        const audio =
+            new Audio(audioUrl);
 
-        currentTutorAudioUrl =
-            URL.createObjectURL(audioBlob);
+        audio.preload = "auto";
+        audio.volume = 1;
 
-        tutorAudio.pause();
-        tutorAudio.src = currentTutorAudioUrl;
-        tutorAudio.currentTime = 0;
-        tutorAudio.volume = 1;
+        audio.addEventListener(
+            "canplay",
+            () => {
+                console.log(
+                    "Tutor audio can be played."
+                );
+            },
+            {
+                once: true,
+            }
+        );
 
-        tutorAudio.addEventListener(
+        audio.addEventListener(
+            "playing",
+            () => {
+                console.log(
+                    "Tutor audio is playing."
+                );
+            },
+            {
+                once: true,
+            }
+        );
+
+        audio.addEventListener(
             "ended",
             () => {
-                if (currentTutorAudioUrl) {
+                console.log(
+                    "Tutor audio finished."
+                );
+
+                if (audioUrl) {
                     URL.revokeObjectURL(
-                        currentTutorAudioUrl
+                        audioUrl
                     );
 
-                    currentTutorAudioUrl = null;
+                    audioUrl = null;
                 }
             },
             {
@@ -841,20 +897,20 @@ async function playTutorAudio(
             }
         );
 
-        tutorAudio.addEventListener(
+        audio.addEventListener(
             "error",
             () => {
                 console.error(
-                    "The tutor Audio element failed:",
-                    tutorAudio.error
+                    "Tutor audio element failed:",
+                    audio.error
                 );
 
-                if (currentTutorAudioUrl) {
+                if (audioUrl) {
                     URL.revokeObjectURL(
-                        currentTutorAudioUrl
+                        audioUrl
                     );
 
-                    currentTutorAudioUrl = null;
+                    audioUrl = null;
                 }
             },
             {
@@ -862,12 +918,18 @@ async function playTutorAudio(
             }
         );
 
-        await tutorAudio.play();
+        await audio.play();
 
         console.log(
-            "Tutor audio started."
+            "Tutor audio play request accepted."
         );
     } catch (error) {
+        if (audioUrl) {
+            URL.revokeObjectURL(
+                audioUrl
+            );
+        }
+
         console.error(
             "Could not play tutor audio:",
             error
@@ -893,9 +955,11 @@ function formatCheckpoint(checkpoint) {
         complete: "Complete",
     };
 
-    return labels[normalized] ??
+    return (
+        labels[normalized] ??
         normalized.charAt(0).toUpperCase() +
-        normalized.slice(1);
+            normalized.slice(1)
+    );
 }
 
 function setCheckpoint(text) {
@@ -969,20 +1033,23 @@ function updateButtons() {
     cameraAudioButton.classList.toggle(
         "active",
         isRecording &&
-        activeButton === cameraAudioButton
+            activeButton ===
+                cameraAudioButton
     );
 
     audioOnlyButton.classList.toggle(
         "active",
         isRecording &&
-        activeButton === audioOnlyButton
+            activeButton ===
+                audioOnlyButton
     );
 
     cameraAudioButton.setAttribute(
         "aria-pressed",
         String(
             isRecording &&
-            activeButton === cameraAudioButton
+                activeButton ===
+                    cameraAudioButton
         )
     );
 
@@ -990,7 +1057,8 @@ function updateButtons() {
         "aria-pressed",
         String(
             isRecording &&
-            activeButton === audioOnlyButton
+                activeButton ===
+                    audioOnlyButton
         )
     );
 }
@@ -1002,7 +1070,10 @@ function bindHoldButton(
     button.addEventListener(
         "pointerdown",
         (event) => {
-            beginHold(event, includeImage);
+            beginHold(
+                event,
+                includeImage
+            );
         }
     );
 
@@ -1059,7 +1130,10 @@ whiteboardCloseButton.addEventListener(
 whiteboardOverlay.addEventListener(
     "pointerdown",
     (event) => {
-        if (event.target === whiteboardOverlay) {
+        if (
+            event.target ===
+            whiteboardOverlay
+        ) {
             closeWhiteboard();
         }
     }

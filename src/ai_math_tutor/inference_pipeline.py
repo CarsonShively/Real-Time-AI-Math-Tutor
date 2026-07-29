@@ -179,6 +179,8 @@ class InferencePipeline:
         
         waveform = np.concatenate(chunks)
         
+        print(f"====================================\n\nWAVEFORM SUCCESSFUL\n\n=======================================")
+        
         return {
             "waveform": waveform,
             "sampling_rate": 24000
