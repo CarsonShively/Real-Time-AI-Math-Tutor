@@ -45,6 +45,83 @@ body {
     display: none !important;
 }
 
+.begin-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding:
+        max(20px, env(safe-area-inset-top))
+        20px
+        max(20px, env(safe-area-inset-bottom));
+
+    background:
+        linear-gradient(
+            155deg,
+            #031a38 0%,
+            #07559b 55%,
+            #0799d2 100%
+        );
+}
+
+.begin-button {
+    min-width: 170px;
+    min-height: 64px;
+
+    padding: 16px 34px;
+
+    border:
+        2px solid rgba(255, 255, 255, 0.85);
+    border-radius: 999px;
+
+    background:
+        rgba(2, 26, 57, 0.82);
+    color: white;
+
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+
+    cursor: pointer;
+
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+
+    box-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.35),
+        0 0 28px rgba(43, 185, 255, 0.28);
+
+    transition:
+        transform 140ms ease,
+        background-color 140ms ease,
+        opacity 140ms ease;
+}
+
+.begin-button:hover:not(:disabled) {
+    transform: scale(1.05);
+
+    background:
+        rgba(15, 89, 151, 0.95);
+}
+
+.begin-button:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.begin-button:focus-visible {
+    outline: 4px solid white;
+    outline-offset: 5px;
+}
+
+.begin-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 .app-page {
     position: relative;
 
@@ -610,6 +687,15 @@ body {
 }
 
 @media (max-width: 600px) {
+    .begin-button {
+        min-width: 150px;
+        min-height: 58px;
+
+        padding: 14px 28px;
+
+        font-size: 1.1rem;
+    }
+
     .app-page {
         gap: 12px;
 

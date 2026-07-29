@@ -2,6 +2,14 @@ const video = document.getElementById("camera");
 const canvas = document.getElementById("capture-canvas");
 const canvasContext = canvas.getContext("2d");
 
+const beginOverlay = document.getElementById(
+    "begin-overlay"
+);
+
+const beginButton = document.getElementById(
+    "begin-button"
+);
+
 const cameraAudioButton = document.getElementById(
     "camera-audio-button"
 );
@@ -89,6 +97,8 @@ async function startMedia() {
         cameraOffMessage.classList.add("hidden");
 
         updateButtons();
+
+        return true;
     } catch (error) {
         console.error(
             "Could not access camera or microphone:",
@@ -99,7 +109,75 @@ async function startMedia() {
             "Could not access the camera or microphone.";
 
         cameraOffMessage.classList.remove("hidden");
+
+        return false;
     }
+}
+
+async function playGreetingAudio() {
+    const helloAudio = new Audio(
+        "/static/hello.wav"
+    );
+
+    helloAudio.preload = "auto";
+
+    try {
+        await helloAudio.play();
+
+        console.log(
+            "Greeting audio started."
+        );
+    } catch (error) {
+        console.error(
+            "Could not play greeting audio:",
+            error
+        );
+
+        throw error;
+    }
+}
+
+async function beginTutor() {
+    if (!beginButton || !beginOverlay) {
+        console.error(
+            "Begin overlay elements were not found."
+        );
+        return;
+    }
+
+    beginButton.disabled = true;
+    beginButton.textContent = "Starting…";
+
+    const mediaStarted = await startMedia();
+
+    if (!mediaStarted) {
+        beginButton.disabled = false;
+        beginButton.textContent = "Try Again";
+        return;
+    }
+
+    try {
+        /*
+         * This runs directly from the user's click,
+         * allowing the browser to play sound.
+         */
+        await playGreetingAudio();
+    } catch (error) {
+        /*
+         * The tutor can still open if the greeting
+         * file is missing or cannot be played.
+         */
+        console.error(
+            "The tutor started without greeting audio.",
+            error
+        );
+    }
+
+    /*
+     * Remove the overlay completely for the
+     * remainder of this page load.
+     */
+    beginOverlay.remove();
 }
 
 function beginHold(event, includeImage) {
@@ -678,6 +756,12 @@ async function playTutorAudio(
         const audioBlob =
             await response.blob();
 
+        if (audioBlob.size === 0) {
+            throw new Error(
+                "The tutor audio response was empty."
+            );
+        }
+
         const audioUrl =
             URL.createObjectURL(audioBlob);
 
@@ -704,11 +788,17 @@ async function playTutorAudio(
         );
 
         await audio.play();
+
+        console.log(
+            "Tutor audio started."
+        );
     } catch (error) {
         console.error(
             "Could not play tutor audio:",
             error
         );
+
+        setCheckpoint("Audio error");
     }
 }
 
@@ -911,4 +1001,7 @@ whiteboardPanel.addEventListener(
     }
 );
 
-startMedia();
+beginButton.addEventListener(
+    "click",
+    beginTutor
+);
