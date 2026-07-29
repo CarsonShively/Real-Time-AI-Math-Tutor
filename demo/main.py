@@ -53,7 +53,7 @@ async def pipeline(audio: UploadFile=File(...), image: UploadFile | None=File(de
     else:
         yield json.dumps({"checkpoint": "formatting"}) + "\n"
         user_turn = question
-        app.state.conversation.add_user_turn(user_turn)
+        app.state.conversation.add_user_turn(user_turn["user_question"])
         
     tutoring = app.state.pipeline.tutoring_layer(app.state.conversation.get_conversation())
     

@@ -98,7 +98,6 @@ class InferencePipeline:
         reasoning_tokens = input_plus_response[:, input_len:]
 
         decoded_reasoning = self.reasoning_and_tutor_processor.batch_decode(reasoning_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
-        print(f"\n===========\n{repr(decoded_reasoning)}\n==============\n")
 
         reasoning = json.loads(decoded_reasoning)
         print(f"========== REASONING RESULT ==========\n\n{json.dumps(reasoning, ensure_ascii=False, indent=2)}\n\n=======================================")
