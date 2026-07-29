@@ -1,6 +1,6 @@
 from transformers import AutoProcessor, Qwen2VLForConditionalGeneration, pipeline, AutoModelForMultimodalLM
 import torch
-from ai_math_tutor.rules import EXTRACTION_RULES, REASONING_RULES, TUTOR_RULES, QUESTION_RULES
+from ai_math_tutor.rules import EXTRACTION_RULES, REASONING_RULES, TUTOR_RULES
 import json
 from kokoro import KPipeline
 import numpy as np
