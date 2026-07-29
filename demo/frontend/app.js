@@ -114,29 +114,47 @@ async function startMedia() {
     }
 }
 
-async function playGreetingAudio() {
-    const helloAudio = new Audio(
-        "/static/hello.wav"
-    );
+function playGreetingAudio() {
+    return new Promise((resolve, reject) => {
+        if (!("speechSynthesis" in window)) {
+            reject(
+                new Error(
+                    "Browser text-to-speech is unavailable."
+                )
+            );
+            return;
+        }
 
-    helloAudio.preload = "auto";
+        const speech =
+            new SpeechSynthesisUtterance(
+                "Hello! I'm your AI math tutor."
+            );
 
-    try {
-        await helloAudio.play();
+        speech.lang = "en-US";
+        speech.rate = 0.95;
+        speech.pitch = 1;
+        speech.volume = 1;
 
-        console.log(
-            "Greeting audio started."
-        );
-    } catch (error) {
-        console.error(
-            "Could not play greeting audio:",
-            error
-        );
+        speech.onend = () => {
+            console.log(
+                "Greeting speech finished."
+            );
 
-        throw error;
-    }
+            resolve();
+        };
+
+        speech.onerror = (event) => {
+            reject(
+                new Error(
+                    `Greeting speech failed: ${event.error}`
+                )
+            );
+        };
+
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(speech);
+    });
 }
-
 async function beginTutor() {
     if (!beginButton || !beginOverlay) {
         console.error(
