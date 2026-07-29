@@ -65,6 +65,7 @@ class InferencePipeline:
         extracted_only = input_plus_extracted[:, input_len:]
 
         decoded_extract = self.extraction_processor.batch_decode(extracted_only, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
+        print(f"\n===========\n{repr(decoded_extract)}\n==============\n")
 
         extracted_math = json.loads(decoded_extract)
         print(f"========== EXTRACTION RESULT ==========\n\n{json.dumps(extracted_math, ensure_ascii=False, indent=2)}\n\n=======================================")
@@ -105,7 +106,6 @@ class InferencePipeline:
     def question_layer(self, audio):
         transcript = self.question_model(audio)["text"].strip()
 
-        print(f"\n===========\n{repr(transcript)}\n==============\n")
 
         message = [
             {
@@ -134,8 +134,6 @@ class InferencePipeline:
         question_tokens = input_plus_response[:, input_len:]
 
         decoded_question = self.reasoning_and_tutor_processor.batch_decode(question_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
-
-        print(f"\n===========\n{repr(decoded_question)}\n==============\n")
 
         question = json.loads(decoded_question)
         print(f"========== QUESTION RESULT ==========\n\n{json.dumps(question, ensure_ascii=False, indent=2)}\n\n=======================================")
