@@ -56,6 +56,15 @@ const tutorResponseElement = document.getElementById(
 
 const IMAGE_CAPTURE_DELAY_MS = 1000;
 
+/*
+ * Reuse one Audio object for all tutor responses.
+ * It is unlocked when the user clicks Begin.
+ */
+const tutorAudio = new Audio();
+tutorAudio.preload = "auto";
+
+let currentTutorAudioUrl = null;
+
 let currentStream = null;
 let mediaRecorder = null;
 let audioChunks = [];
@@ -126,7 +135,7 @@ function playGreetingAudio() {
 
     const speech =
         new SpeechSynthesisUtterance(
-            "Hello! I'm your AI math tutor."
+            "Hello!"
         );
 
     speech.lang = "en-US";
@@ -155,10 +164,40 @@ function playGreetingAudio() {
     };
 
     /*
-     * Call speak directly during the user's click.
-     * Do not await it.
+     * Start speech directly during the user click.
      */
     window.speechSynthesis.speak(speech);
+}
+
+async function unlockTutorAudio() {
+    /*
+     * A tiny silent WAV used to unlock normal
+     * HTML audio playback on mobile browsers.
+     */
+    tutorAudio.src =
+        "data:audio/wav;base64," +
+        "UklGRiQAAABXQVZFZm10IBAAAAABAAEA" +
+        "QB8AAEAfAAABAAgAZGF0YQAAAAA=";
+
+    tutorAudio.volume = 0;
+
+    try {
+        await tutorAudio.play();
+
+        tutorAudio.pause();
+        tutorAudio.currentTime = 0;
+
+        console.log(
+            "Tutor audio unlocked."
+        );
+    } catch (error) {
+        console.error(
+            "Could not unlock tutor audio:",
+            error
+        );
+    } finally {
+        tutorAudio.volume = 1;
+    }
 }
 
 async function beginTutor() {
@@ -173,10 +212,12 @@ async function beginTutor() {
     beginButton.textContent = "Starting…";
 
     /*
-     * Start speech before any await so it remains
-     * part of the user's click gesture.
+     * Start these during the Begin click so mobile
+     * browsers treat them as user initiated.
      */
     playGreetingAudio();
+
+    await unlockTutorAudio();
 
     const mediaStarted = await startMedia();
 
@@ -327,10 +368,6 @@ function stopRecording() {
         imageCaptureTimer = null;
     }
 
-    /*
-     * If the user releases before one second,
-     * take the silent image when the hold ends.
-     */
     if (
         includeImageForTurn &&
         !imageCapturePromise
@@ -650,11 +687,6 @@ async function updateWhiteboard(
     tutorResponse,
     showUrl
 ) {
-    /*
-     * For an audio-only turn, preserve the existing
-     * steps and incorrect step. Only update the
-     * tutor response.
-     */
     if (includedImage) {
         try {
             const response = await fetch(
@@ -765,38 +797,72 @@ async function playTutorAudio(
         const audioBlob =
             await response.blob();
 
+        console.log(
+            "Tutor audio response:",
+            audioBlob.type,
+            audioBlob.size
+        );
+
         if (audioBlob.size === 0) {
             throw new Error(
                 "The tutor audio response was empty."
             );
         }
 
-        const audioUrl =
+        if (currentTutorAudioUrl) {
+            URL.revokeObjectURL(
+                currentTutorAudioUrl
+            );
+
+            currentTutorAudioUrl = null;
+        }
+
+        currentTutorAudioUrl =
             URL.createObjectURL(audioBlob);
 
-        const audio = new Audio(audioUrl);
+        tutorAudio.pause();
+        tutorAudio.src = currentTutorAudioUrl;
+        tutorAudio.currentTime = 0;
+        tutorAudio.volume = 1;
 
-        audio.addEventListener(
+        tutorAudio.addEventListener(
             "ended",
             () => {
-                URL.revokeObjectURL(audioUrl);
+                if (currentTutorAudioUrl) {
+                    URL.revokeObjectURL(
+                        currentTutorAudioUrl
+                    );
+
+                    currentTutorAudioUrl = null;
+                }
             },
             {
                 once: true,
             }
         );
 
-        audio.addEventListener(
+        tutorAudio.addEventListener(
             "error",
             () => {
-                URL.revokeObjectURL(audioUrl);
+                console.error(
+                    "The tutor Audio element failed:",
+                    tutorAudio.error
+                );
+
+                if (currentTutorAudioUrl) {
+                    URL.revokeObjectURL(
+                        currentTutorAudioUrl
+                    );
+
+                    currentTutorAudioUrl = null;
+                }
             },
             {
                 once: true,
             }
         );
 
-        await audio.play();
+        await tutorAudio.play();
 
         console.log(
             "Tutor audio started."
@@ -993,10 +1059,6 @@ whiteboardCloseButton.addEventListener(
 whiteboardOverlay.addEventListener(
     "pointerdown",
     (event) => {
-        /*
-         * Close only when the user presses outside
-         * the whiteboard panel.
-         */
         if (event.target === whiteboardOverlay) {
             closeWhiteboard();
         }
