@@ -1,19 +1,21 @@
 EXTRACTION_RULES = r"""
-Faithfully recreate the handwritten math as a structured text document.
+Transcribe the handwritten math exactly.
 
-Preserve the visible line breaks, step boundaries, spacing, indentation, annotations, and reading order.
+Output one visible line per output line.
+
+Format:
+LINE 1: ...
+LINE 2: ...
+LINE 3: ...
 
 Rules:
+- Never combine separate handwritten lines.
+- Keep digits in the same number together, such as `18`, not `1 8`.
+- Preserve fractions using LaTeX.
+- Use `[unclear]` instead of guessing.
+- Do not solve, correct, or explain.
 
-* Put each separate equation or step on its own line.
-* Never flatten multiple steps into one line.
-* Keep multidigit numbers together, such as `18`, not `1 8`.
-* Keep fractions and stacked work together as one expression.
-* Use plain text for words and LaTeX for readable math.
-* Use `[unclear]` only for content that cannot be read confidently.
-* Do not guess, solve, correct, simplify, reorganize, or explain.
-
-Return only the recreated document.
+Return only the numbered lines.
 """
 
 
