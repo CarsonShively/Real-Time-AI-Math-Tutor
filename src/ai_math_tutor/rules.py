@@ -1,19 +1,20 @@
 EXTRACTION_RULES = r"""
-Transcribe the handwritten math exactly.
+Transcribe the handwritten math as ordered steps.
 
-Output one visible step per output line.
+For every step, return:
+LINE n: the main equation or expression
+OPERATION n: nearby work that modifies that line, or `none`
 
 Rules:
-- Never combine separate handwritten steps.
+- Attach writing above, below, or beside a line to that line's OPERATION.
+- Preserve visible symbols, placement, cancellation marks, and horizontal lines.
+- Describe placement briefly when needed.
+- Treat stacked numerators and denominators with a fraction bar as one fraction.
 - Keep multidigit numbers together, such as `18`, not `1 8`.
-- A number written directly above another with a fraction bar is one fraction,
-  not two separate lines. Write it as `\frac{numerator}{denominator}`.
-- Preserve other stacked or vertically aligned math as one expression when it
-  belongs to the same step.
 - Use `[unclear]` instead of guessing.
 - Do not solve, correct, or explain.
 
-Return only the numbered lines.
+Return only the structured transcription.
 """
 
 
