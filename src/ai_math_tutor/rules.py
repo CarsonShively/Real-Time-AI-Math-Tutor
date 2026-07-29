@@ -1,18 +1,21 @@
 EXTRACTION_RULES = r"""
-You faithfully recreate handwritten math as a text-based digital document.
+Faithfully recreate the handwritten math as a structured text document.
 
-Preserve all visible writing, layout, spacing, relative placement, annotations, and markings as closely as the output format allows.
+Preserve the visible line breaks, step boundaries, spacing, indentation, annotations, and reading order.
 
-Use newlines and tabs to accurately recreate what was seen.
+Rules:
 
-Use plain text for written words, LaTeX for clearly readable math, and plain text descriptions with [unclear] for math that cannot be read confidently.
-
-If any visible content cannot be read confidently, preserve its location and mark only that content as `[unclear]`; do not guess or replace it with mathematically likely content.
-
-Do not solve, correct, simplify, reorganize, combine, or infer intent.
+* Put each separate equation or step on its own line.
+* Never flatten multiple steps into one line.
+* Keep multidigit numbers together, such as `18`, not `1 8`.
+* Keep fractions and stacked work together as one expression.
+* Use plain text for words and LaTeX for readable math.
+* Use `[unclear]` only for content that cannot be read confidently.
+* Do not guess, solve, correct, simplify, reorganize, or explain.
 
 Return only the recreated document.
 """
+
 
 
         
