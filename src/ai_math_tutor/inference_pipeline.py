@@ -104,6 +104,8 @@ class InferencePipeline:
     def question_layer(self, audio):
         transcript = self.question_model(audio)["text"].strip()
 
+        print(f"\n===========\n{repr(transcript)}\n==============\n")
+
         message = [
             {
                 "role": "system",
@@ -130,6 +132,8 @@ class InferencePipeline:
         question_tokens = input_plus_response[:, input_len:]
 
         decoded_question = self.reasoning_and_tutor_processor.batch_decode(question_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
+
+        print(f"\n===========\n{repr(decoded_question)}\n==============\n")
 
         question = json.loads(decoded_question)
         print(f"========== QUESTION RESULT ==========\n\n{json.dumps(question, ensure_ascii=False, indent=2)}\n\n=======================================")
