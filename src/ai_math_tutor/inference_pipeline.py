@@ -54,8 +54,7 @@ class InferencePipeline:
             add_generation_prompt=True,
             return_dict=True,
             tokenize=True,
-            return_tensors="pt",
-            enable_thinking=False
+            return_tensors="pt"
         ).to("cuda:0")
 
         with torch.inference_mode():
@@ -64,7 +63,7 @@ class InferencePipeline:
         input_len = processed_dict["input_ids"].shape[1]
         extracted_only = input_plus_extracted[:, input_len:]
 
-        decoded_extract = self.extraction_processor.batch_decode(extracted_only, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
+        decoded_extract = self.extraction_processor.batch_decode(extracted_only, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].replace("<|im_end|>", "").strip()
         print(f"\n===========\n{repr(decoded_extract)}\n==============\n")
 
         extracted_math = json.loads(decoded_extract)
