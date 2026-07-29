@@ -87,7 +87,8 @@ class InferencePipeline:
             tokenize=True,
             return_dict=True,
             return_tensors="pt",
-            add_generation_prompt=True
+            add_generation_prompt=True,
+            enable_thinking=False
         ).to("cuda:1")
 
         with torch.inference_mode():
@@ -155,6 +156,7 @@ class InferencePipeline:
             add_generation_prompt=True,
             return_tensors="pt",
             return_dict=True,
+            enable_thinking=False
         ).to("cuda:1")
 
         with torch.inference_mode():
