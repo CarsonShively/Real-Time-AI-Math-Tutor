@@ -56,6 +56,23 @@ const tutorResponseElement = document.getElementById(
 
 const IMAGE_CAPTURE_DELAY_MS = 1000;
 
+/*
+ * Create one persistent audio context.
+ *
+ * On iPhone, this is enabled by the Begin button tap.
+ * Later tutor responses reuse the same context.
+ */
+const AudioContextClass =
+    window.AudioContext ||
+    window.webkitAudioContext;
+
+const tutorAudioContext =
+    AudioContextClass
+        ? new AudioContextClass()
+        : null;
+
+let activeTutorAudioSource = null;
+
 let currentStream = null;
 let mediaRecorder = null;
 let audioChunks = [];
@@ -92,6 +109,7 @@ async function startMedia() {
         });
 
         video.srcObject = currentStream;
+
         await video.play();
 
         cameraOffMessage.classList.add(
@@ -160,10 +178,40 @@ function playGreetingAudio() {
     };
 
     /*
-     * This runs directly during the user's click,
-     * which allows browser speech on mobile.
+     * This happens directly during the Begin tap.
      */
     window.speechSynthesis.speak(speech);
+}
+
+function enableTutorAudio() {
+    if (!tutorAudioContext) {
+        console.error(
+            "Web Audio is unavailable in this browser."
+        );
+
+        return;
+    }
+
+    /*
+     * Do not await this inside beginTutor.
+     *
+     * Calling resume directly during the Begin tap
+     * enables the persistent context on iPhone.
+     */
+    tutorAudioContext
+        .resume()
+        .then(() => {
+            console.log(
+                "Tutor audio enabled:",
+                tutorAudioContext.state
+            );
+        })
+        .catch((error) => {
+            console.error(
+                "Could not enable tutor audio:",
+                error
+            );
+        });
 }
 
 async function beginTutor() {
@@ -179,12 +227,14 @@ async function beginTutor() {
     beginButton.textContent = "Starting…";
 
     /*
-     * Speak before the first await so it remains
-     * directly connected to the user's click.
+     * Both calls happen before the first await,
+     * directly from the user's Begin tap.
      */
     playGreetingAudio();
+    enableTutorAudio();
 
-    const mediaStarted = await startMedia();
+    const mediaStarted =
+        await startMedia();
 
     if (!mediaStarted) {
         beginButton.disabled = false;
@@ -345,14 +395,15 @@ function stopRecording() {
     }
 
     /*
-     * If the button is released before the normal
-     * capture delay, capture the image now.
+     * Capture immediately when the button is
+     * released before the normal delay.
      */
     if (
         includeImageForTurn &&
         !imageCapturePromise
     ) {
-        imageCapturePromise = captureImage();
+        imageCapturePromise =
+            captureImage();
     }
 
     if (
@@ -452,6 +503,7 @@ function captureImage() {
                     );
 
                     resolve(null);
+
                     return;
                 }
 
@@ -478,7 +530,8 @@ async function handleCompletedTurn(
 
     updateButtons();
 
-    const formData = new FormData();
+    const formData =
+        new FormData();
 
     formData.append(
         "audio",
@@ -782,9 +835,13 @@ function renderIncorrectStep(step) {
 async function playTutorAudio(
     speakUrl = "/speak"
 ) {
-    let audioUrl = null;
-
     try {
+        if (!tutorAudioContext) {
+            throw new Error(
+                "Web Audio is unavailable."
+            );
+        }
+
         console.log(
             "Requesting tutor audio:",
             speakUrl
@@ -821,115 +878,121 @@ async function playTutorAudio(
             );
         }
 
-        const audioBlob =
-            await response.blob();
+        const audioBytes =
+            await response.arrayBuffer();
 
         /*
-         * A nonzero size confirms that the browser
-         * received the tutor audio response.
+         * A nonzero byteLength confirms that the
+         * tutor audio reached the frontend.
          */
         console.log(
             "Tutor audio received:",
             {
-                type: audioBlob.type,
-                size: audioBlob.size,
+                bytes:
+                    audioBytes.byteLength,
+                contentType:
+                    response.headers.get(
+                        "content-type"
+                    ),
             }
         );
 
-        if (audioBlob.size === 0) {
+        if (audioBytes.byteLength === 0) {
             throw new Error(
                 "The tutor audio response was empty."
             );
         }
 
-        audioUrl =
-            URL.createObjectURL(
-                audioBlob
+        /*
+         * The context should already be running
+         * from the Begin tap.
+         *
+         * Resume again in case iOS temporarily
+         * suspended it.
+         */
+        if (
+            tutorAudioContext.state !==
+            "running"
+        ) {
+            console.log(
+                "Resuming tutor audio context:",
+                tutorAudioContext.state
             );
 
-        const audio =
-            new Audio(audioUrl);
-
-        audio.preload = "auto";
-        audio.volume = 1;
-
-        audio.addEventListener(
-            "canplay",
-            () => {
-                console.log(
-                    "Tutor audio can be played."
-                );
-            },
-            {
-                once: true,
-            }
-        );
-
-        audio.addEventListener(
-            "playing",
-            () => {
-                console.log(
-                    "Tutor audio is playing."
-                );
-            },
-            {
-                once: true,
-            }
-        );
-
-        audio.addEventListener(
-            "ended",
-            () => {
-                console.log(
-                    "Tutor audio finished."
-                );
-
-                if (audioUrl) {
-                    URL.revokeObjectURL(
-                        audioUrl
-                    );
-
-                    audioUrl = null;
-                }
-            },
-            {
-                once: true,
-            }
-        );
-
-        audio.addEventListener(
-            "error",
-            () => {
-                console.error(
-                    "Tutor audio element failed:",
-                    audio.error
-                );
-
-                if (audioUrl) {
-                    URL.revokeObjectURL(
-                        audioUrl
-                    );
-
-                    audioUrl = null;
-                }
-            },
-            {
-                once: true,
-            }
-        );
-
-        await audio.play();
-
-        console.log(
-            "Tutor audio play request accepted."
-        );
-    } catch (error) {
-        if (audioUrl) {
-            URL.revokeObjectURL(
-                audioUrl
-            );
+            await tutorAudioContext.resume();
         }
 
+        console.log(
+            "Decoding tutor audio."
+        );
+
+        const decodedAudio =
+            await tutorAudioContext
+                .decodeAudioData(
+                    audioBytes.slice(0)
+                );
+
+        console.log(
+            "Tutor audio decoded:",
+            {
+                duration:
+                    decodedAudio.duration,
+                sampleRate:
+                    decodedAudio.sampleRate,
+                channels:
+                    decodedAudio
+                        .numberOfChannels,
+            }
+        );
+
+        /*
+         * Stop an older tutor response if one is
+         * somehow still playing.
+         */
+        if (activeTutorAudioSource) {
+            try {
+                activeTutorAudioSource.stop();
+            } catch (error) {
+                console.debug(
+                    "Previous tutor audio was already stopped.",
+                    error
+                );
+            }
+
+            activeTutorAudioSource = null;
+        }
+
+        const source =
+            tutorAudioContext
+                .createBufferSource();
+
+        source.buffer = decodedAudio;
+
+        source.connect(
+            tutorAudioContext.destination
+        );
+
+        source.onended = () => {
+            console.log(
+                "Tutor audio finished."
+            );
+
+            if (
+                activeTutorAudioSource ===
+                source
+            ) {
+                activeTutorAudioSource = null;
+            }
+        };
+
+        activeTutorAudioSource = source;
+
+        source.start(0);
+
+        console.log(
+            "Tutor audio started."
+        );
+    } catch (error) {
         console.error(
             "Could not play tutor audio:",
             error
