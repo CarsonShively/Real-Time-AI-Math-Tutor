@@ -64,7 +64,7 @@ class InferencePipeline:
         extracted_only = input_plus_extracted[:, input_len:]
 
         decoded_extract = self.extraction_processor.batch_decode(extracted_only, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].replace("<|im_end|>", "").strip()
-        print(f"\n===========\n{repr(decoded_extract)}\n==============\n")
+
 
         extracted_math = json.loads(decoded_extract)
         print(f"========== EXTRACTION RESULT ==========\n\n{json.dumps(extracted_math, ensure_ascii=False, indent=2)}\n\n=======================================")
@@ -97,6 +97,7 @@ class InferencePipeline:
         reasoning_tokens = input_plus_response[:, input_len:]
 
         decoded_reasoning = self.reasoning_and_tutor_processor.batch_decode(reasoning_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
+        print(f"\n===========\n{repr(decoded_reasoning)}\n==============\n")
 
         reasoning = json.loads(decoded_reasoning)
         print(f"========== REASONING RESULT ==========\n\n{json.dumps(reasoning, ensure_ascii=False, indent=2)}\n\n=======================================")
