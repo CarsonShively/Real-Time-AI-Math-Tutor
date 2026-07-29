@@ -70,6 +70,8 @@ async def pipeline(audio: UploadFile=File(...), image: UploadFile | None=File(de
     buffer.seek(0)
     
     app.state.speak = buffer
+    
+    yield json.dumps({"checkpoint": "complete"}) + "\n"
 
 @app.get("/show")
 async def show():

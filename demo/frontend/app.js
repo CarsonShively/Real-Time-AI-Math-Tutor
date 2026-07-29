@@ -441,6 +441,7 @@ async function readCheckpointStream(
     let tutorResponse = null;
     let showUrl = "/show";
     let speakUrl = "/speak";
+    let pipelineComplete = false;
 
     while (true) {
         const {
@@ -475,6 +476,15 @@ async function readCheckpointStream(
                         event.checkpoint
                     )
                 );
+
+                if (
+                    String(event.checkpoint)
+                        .trim()
+                        .toLowerCase() ===
+                    "complete"
+                ) {
+                    pipelineComplete = true;
+                }
             }
 
             tutorResponse =
@@ -506,6 +516,15 @@ async function readCheckpointStream(
                     event.checkpoint
                 )
             );
+
+            if (
+                String(event.checkpoint)
+                    .trim()
+                    .toLowerCase() ===
+                "complete"
+            ) {
+                pipelineComplete = true;
+            }
         }
 
         tutorResponse =
@@ -519,6 +538,13 @@ async function readCheckpointStream(
 
         speakUrl =
             event.speak_url ?? speakUrl;
+    }
+
+    if (!pipelineComplete) {
+        throw new Error(
+            "The pipeline stream ended before " +
+            "the complete checkpoint."
+        );
     }
 
     await updateWhiteboard(
