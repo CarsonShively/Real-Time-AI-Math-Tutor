@@ -436,9 +436,13 @@ body {
     padding:
         max(18px, env(safe-area-inset-top))
         18px
-        max(170px, calc(
-            env(safe-area-inset-bottom) + 150px
-        ));
+        max(
+            170px,
+            calc(
+                env(safe-area-inset-bottom) +
+                150px
+            )
+        );
 
     background:
         rgba(1, 14, 31, 0.62);
@@ -452,6 +456,9 @@ body {
 
     width: min(100%, 680px);
     max-height: min(78dvh, 760px);
+
+    display: flex;
+    flex-direction: column;
 
     overflow: hidden;
 
@@ -513,6 +520,8 @@ body {
 }
 
 .whiteboard-header {
+    flex: 0 0 auto;
+
     padding:
         24px
         66px
@@ -551,16 +560,21 @@ body {
 }
 
 .whiteboard-content {
-    max-height:
-        calc(min(78dvh, 760px) - 93px);
+    min-height: 0;
+    flex: 1 1 auto;
 
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    overflow: hidden;
 
     padding: 22px;
 }
 
 .whiteboard-section {
+    height: 100%;
+    min-height: 0;
+
+    display: flex;
+    flex-direction: column;
+
     padding: 18px;
 
     border:
@@ -573,12 +587,9 @@ body {
         0 8px 22px rgba(31, 74, 112, 0.08);
 }
 
-.whiteboard-section +
-.whiteboard-section {
-    margin-top: 16px;
-}
-
 .whiteboard-section h2 {
+    flex: 0 0 auto;
+
     margin: 0 0 12px;
 
     color: #174c78;
@@ -588,102 +599,119 @@ body {
     letter-spacing: 0.02em;
 }
 
+.conversation-history,
 .correct-steps {
+    min-height: 180px;
+    max-height:
+        calc(
+            min(78dvh, 760px) -
+            190px
+        );
+
     display: flex;
     flex-direction: column;
-    gap: 9px;
+    gap: 12px;
+
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    padding: 4px 5px 4px 2px;
+
+    scroll-behavior: smooth;
 }
 
-.whiteboard-step {
-    position: relative;
+.conversation-turn {
+    width: min(88%, 540px);
 
-    padding:
-        11px
-        12px
-        11px
-        38px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
 
-    border:
-        1px solid #d9e8f3;
-    border-radius: 12px;
-
-    background: #f4faff;
-
-    color: #132a41;
-
-    font-size: 0.95rem;
-    line-height: 1.45;
-
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-}
-
-.whiteboard-step::before {
-    content: "✓";
-
-    position: absolute;
-    top: 10px;
-    left: 13px;
-
-    color: #168154;
-
-    font-weight: 900;
-}
-
-.incorrect-section {
-    border-color: #f1c3ca;
-
-    background: #fffafb;
-}
-
-.incorrect-step {
     padding: 12px 14px;
 
-    border:
-        1px solid #f1c6cd;
-    border-radius: 12px;
-
-    background: #fff1f3;
-    color: #7e2636;
+    border-radius: 16px;
 
     font-size: 0.95rem;
-    font-weight: 650;
-    line-height: 1.45;
+    line-height: 1.5;
 
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+
+    box-shadow:
+        0 5px 14px rgba(31, 74, 112, 0.1);
 }
 
-.tutor-section {
-    border-color: #b9dff4;
-
-    background: #f7fcff;
-}
-
-.tutor-response {
-    padding: 14px;
+.conversation-user {
+    align-self: flex-end;
 
     border:
-        1px solid #c6e6f7;
-    border-radius: 12px;
+        1px solid #9bcff0;
+    border-bottom-right-radius: 5px;
 
-    background: #eaf8ff;
-    color: #14344f;
+    background:
+        linear-gradient(
+            145deg,
+            #e6f6ff,
+            #d7effd
+        );
 
-    font-size: 0.98rem;
-    line-height: 1.55;
+    color: #12344f;
+}
 
+.conversation-assistant {
+    align-self: flex-start;
+
+    border:
+        1px solid #d4e1eb;
+    border-bottom-left-radius: 5px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #ffffff,
+            #f1f6fa
+        );
+
+    color: #172b3e;
+}
+
+.conversation-role {
+    font-size: 0.73rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.conversation-user .conversation-role {
+    color: #1269a5;
+    text-align: right;
+}
+
+.conversation-assistant .conversation-role {
+    color: #536d82;
+}
+
+.conversation-content {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
 
+.conversation-empty,
 .empty-message {
-    margin: 0;
+    margin: auto;
+
+    padding: 24px 14px;
 
     color: #617387;
 
     font-size: 0.9rem;
     line-height: 1.45;
+    text-align: center;
+}
+
+.incorrect-section,
+.tutor-section {
+    display: none;
 }
 
 @media (max-width: 600px) {
@@ -700,9 +728,15 @@ body {
         gap: 12px;
 
         padding:
-            max(10px, env(safe-area-inset-top))
+            max(
+                10px,
+                env(safe-area-inset-top)
+            )
             12px
-            max(14px, env(safe-area-inset-bottom));
+            max(
+                14px,
+                env(safe-area-inset-bottom)
+            );
     }
 
     .top-bar {
@@ -764,13 +798,21 @@ body {
         align-items: flex-start;
 
         padding:
-            max(62px, calc(
-                env(safe-area-inset-top) + 52px
-            ))
+            max(
+                62px,
+                calc(
+                    env(safe-area-inset-top) +
+                    52px
+                )
+            )
             12px
-            max(158px, calc(
-                env(safe-area-inset-bottom) + 144px
-            ));
+            max(
+                158px,
+                calc(
+                    env(safe-area-inset-bottom) +
+                    144px
+                )
+            );
     }
 
     .whiteboard-panel {
@@ -796,13 +838,6 @@ body {
     }
 
     .whiteboard-content {
-        max-height:
-            calc(
-                100dvh -
-                220px -
-                80px
-            );
-
         padding: 15px;
     }
 
@@ -810,6 +845,26 @@ body {
         padding: 15px;
 
         border-radius: 15px;
+    }
+
+    .conversation-history,
+    .correct-steps {
+        min-height: 150px;
+        max-height:
+            calc(
+                100dvh -
+                340px
+            );
+    }
+
+    .conversation-turn {
+        width: 92%;
+
+        padding: 11px 12px;
+
+        border-radius: 14px;
+
+        font-size: 0.9rem;
     }
 }
 
@@ -827,5 +882,9 @@ body {
         max-width: 76px;
 
         font-size: 0.68rem;
+    }
+
+    .conversation-turn {
+        width: 96%;
     }
 }

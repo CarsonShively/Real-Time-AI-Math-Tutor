@@ -56,12 +56,6 @@ const tutorResponseElement = document.getElementById(
 
 const IMAGE_CAPTURE_DELAY_MS = 1000;
 
-/*
- * Create one persistent audio context.
- *
- * On iPhone, this is enabled by the Begin button tap.
- * Later tutor responses reuse the same context.
- */
 const AudioContextClass =
     window.AudioContext ||
     window.webkitAudioContext;
@@ -88,6 +82,10 @@ let includeImageForTurn = false;
 let imageCaptureTimer = null;
 let imageCapturePromise = null;
 let capturedImageBlob = null;
+
+let conversationHistory = [];
+
+prepareConversationPanel();
 
 async function startMedia() {
     try {
@@ -157,18 +155,6 @@ function playGreetingAudio() {
     speech.pitch = 1;
     speech.volume = 1;
 
-    speech.onstart = () => {
-        console.log(
-            "Greeting speech started."
-        );
-    };
-
-    speech.onend = () => {
-        console.log(
-            "Greeting speech finished."
-        );
-    };
-
     speech.onerror = (event) => {
         console.error(
             "Greeting speech failed:",
@@ -177,9 +163,6 @@ function playGreetingAudio() {
         );
     };
 
-    /*
-     * This happens directly during the Begin tap.
-     */
     window.speechSynthesis.speak(speech);
 }
 
@@ -192,12 +175,6 @@ function enableTutorAudio() {
         return;
     }
 
-    /*
-     * Do not await this inside beginTutor.
-     *
-     * Calling resume directly during the Begin tap
-     * enables the persistent context on iPhone.
-     */
     tutorAudioContext
         .resume()
         .then(() => {
@@ -226,10 +203,6 @@ async function beginTutor() {
     beginButton.disabled = true;
     beginButton.textContent = "Starting…";
 
-    /*
-     * Both calls happen before the first await,
-     * directly from the user's Begin tap.
-     */
     playGreetingAudio();
     enableTutorAudio();
 
@@ -347,7 +320,7 @@ function startRecording() {
     imageCapturePromise = null;
     isRecording = true;
 
-    setCheckpoint("Listening");
+    setStatus("Listening");
     updateButtons();
 
     mediaRecorder.addEventListener(
@@ -394,10 +367,6 @@ function stopRecording() {
         imageCaptureTimer = null;
     }
 
-    /*
-     * Capture immediately when the button is
-     * released before the normal delay.
-     */
     if (
         includeImageForTurn &&
         !imageCapturePromise
@@ -454,7 +423,7 @@ async function handleRecordingStopped() {
             "The recorded audio was empty."
         );
 
-        setCheckpoint("");
+        setStatus("");
         updateButtons();
 
         return;
@@ -527,7 +496,7 @@ async function handleCompletedTurn(
     }
 
     inferenceInProgress = true;
-
+    setStatus("Reasoning");
     updateButtons();
 
     const formData =
@@ -566,274 +535,172 @@ async function handleCompletedTurn(
             );
         }
 
-        await readCheckpointStream(
-            response,
-            includedImage
-        );
+        const data = await response.json();
+
+        if (!Array.isArray(data.conversation)) {
+            throw new Error(
+                "The backend response did not include a conversation array."
+            );
+        }
+
+        conversationHistory =
+            data.conversation;
+
+        renderConversationHistory();
+
+        if (
+            typeof data.base64_audio ===
+                "string" &&
+            data.base64_audio.length > 0
+        ) {
+            await playTutorAudio(
+                data.base64_audio
+            );
+        } else {
+            console.warn(
+                "The backend response did not include tutor audio."
+            );
+        }
+
+        setStatus("");
     } catch (error) {
         console.error(
             "Could not complete tutor turn:",
             error
         );
 
-        setCheckpoint("Error");
+        setStatus("Error");
     } finally {
         inferenceInProgress = false;
-
         updateButtons();
     }
 }
 
-async function readCheckpointStream(
-    response,
-    includedImage
-) {
-    if (!response.body) {
-        throw new Error(
-            "The response did not contain a stream."
+function prepareConversationPanel() {
+    if (correctStepsElement) {
+        correctStepsElement.innerHTML = "";
+
+        correctStepsElement.setAttribute(
+            "aria-label",
+            "Conversation history"
         );
     }
 
-    const reader =
-        response.body.getReader();
-
-    const decoder =
-        new TextDecoder();
-
-    let pendingText = "";
-    let tutorResponse = null;
-    let showUrl = "/show";
-    let speakUrl = "/speak";
-    let pipelineComplete = false;
-
-    while (true) {
-        const {
-            value,
-            done,
-        } = await reader.read();
-
-        pendingText += decoder.decode(
-            value || new Uint8Array(),
-            {
-                stream: !done,
-            }
-        );
-
-        const lines =
-            pendingText.split("\n");
-
-        pendingText =
-            lines.pop() ?? "";
-
-        for (const line of lines) {
-            const trimmedLine =
-                line.trim();
-
-            if (!trimmedLine) {
-                continue;
-            }
-
-            const event =
-                JSON.parse(trimmedLine);
-
-            if (event.checkpoint) {
-                setCheckpoint(
-                    formatCheckpoint(
-                        event.checkpoint
-                    )
-                );
-
-                if (
-                    String(event.checkpoint)
-                        .trim()
-                        .toLowerCase() ===
-                    "complete"
-                ) {
-                    pipelineComplete = true;
-                }
-            }
-
-            tutorResponse =
-                event.tutor_response ??
-                event.response ??
-                event.tutoring ??
-                tutorResponse;
-
-            showUrl =
-                event.show_url ??
-                showUrl;
-
-            speakUrl =
-                event.speak_url ??
-                speakUrl;
-        }
-
-        if (done) {
-            break;
-        }
-    }
-
-    const finalLine =
-        pendingText.trim();
-
-    if (finalLine) {
-        const event =
-            JSON.parse(finalLine);
-
-        if (event.checkpoint) {
-            setCheckpoint(
-                formatCheckpoint(
-                    event.checkpoint
-                )
+    if (incorrectStepElement) {
+        const section =
+            incorrectStepElement.closest(
+                "section"
             );
 
-            if (
-                String(event.checkpoint)
-                    .trim()
-                    .toLowerCase() ===
-                "complete"
-            ) {
-                pipelineComplete = true;
-            }
-        }
-
-        tutorResponse =
-            event.tutor_response ??
-            event.response ??
-            event.tutoring ??
-            tutorResponse;
-
-        showUrl =
-            event.show_url ??
-            showUrl;
-
-        speakUrl =
-            event.speak_url ??
-            speakUrl;
-    }
-
-    if (!pipelineComplete) {
-        throw new Error(
-            "The pipeline stream ended before " +
-            "the complete checkpoint."
-        );
-    }
-
-    await updateWhiteboard(
-        includedImage,
-        tutorResponse,
-        showUrl
-    );
-
-    await playTutorAudio(
-        speakUrl
-    );
-
-    setCheckpoint("");
-}
-
-async function updateWhiteboard(
-    includedImage,
-    tutorResponse,
-    showUrl
-) {
-    /*
-     * Audio-only turns preserve the previous
-     * extracted math display.
-     */
-    if (includedImage) {
-        try {
-            const response = await fetch(
-                showUrl,
-                {
-                    cache: "no-store",
-                }
-            );
-
-            if (response.ok) {
-                const data =
-                    await response.json();
-
-                const show =
-                    data.show ?? data;
-
-                renderCorrectSteps(
-                    show?.correct_steps
-                );
-
-                renderIncorrectStep(
-                    show
-                        ?.first_user_incorrect_step
-                );
-
-                tutorResponse =
-                    show?.tutor_response ??
-                    show?.response ??
-                    tutorResponse;
-            }
-        } catch (error) {
-            console.error(
-                "Could not update whiteboard work:",
-                error
-            );
+        if (section) {
+            section.hidden = true;
+        } else {
+            incorrectStepElement.hidden = true;
         }
     }
 
-    if (
-        typeof tutorResponse ===
-        "string"
-    ) {
-        tutorResponseElement.textContent =
-            tutorResponse;
+    if (tutorResponseElement) {
+        const section =
+            tutorResponseElement.closest(
+                "section"
+            );
+
+        if (section) {
+            section.hidden = true;
+        } else {
+            tutorResponseElement.hidden = true;
+        }
     }
 }
 
-function renderCorrectSteps(steps) {
+function renderConversationHistory() {
+    if (!correctStepsElement) {
+        return;
+    }
+
     correctStepsElement.innerHTML = "";
 
-    if (!Array.isArray(steps)) {
-        if (typeof steps === "string") {
-            correctStepsElement.textContent =
-                steps;
-        }
-
-        return;
-    }
-
-    for (const step of steps) {
-        const stepElement =
+    if (conversationHistory.length === 0) {
+        const emptyMessage =
             document.createElement("div");
 
-        stepElement.className =
-            "whiteboard-step";
+        emptyMessage.className =
+            "conversation-empty";
 
-        stepElement.textContent =
-            String(step);
+        emptyMessage.textContent =
+            "No conversation yet.";
 
         correctStepsElement.appendChild(
-            stepElement
+            emptyMessage
         );
-    }
-}
-
-function renderIncorrectStep(step) {
-    if (
-        step === null ||
-        step === undefined ||
-        step === ""
-    ) {
-        incorrectStepElement.textContent =
-            "No incorrect step found.";
 
         return;
     }
 
-    incorrectStepElement.textContent =
-        String(step);
+    for (const turn of conversationHistory) {
+        const turnElement =
+            document.createElement("div");
+
+        const role =
+            turn?.role === "assistant"
+                ? "assistant"
+                : "user";
+
+        turnElement.className =
+            `conversation-turn conversation-${role}`;
+
+        const roleElement =
+            document.createElement("div");
+
+        roleElement.className =
+            "conversation-role";
+
+        roleElement.textContent =
+            role === "assistant"
+                ? "Tutor"
+                : "You";
+
+        const contentElement =
+            document.createElement("div");
+
+        contentElement.className =
+            "conversation-content";
+
+        contentElement.textContent =
+            String(turn?.content ?? "");
+
+        turnElement.appendChild(
+            roleElement
+        );
+
+        turnElement.appendChild(
+            contentElement
+        );
+
+        correctStepsElement.appendChild(
+            turnElement
+        );
+    }
+
+    scrollConversationToBottom();
+}
+
+function scrollConversationToBottom() {
+    requestAnimationFrame(() => {
+        if (correctStepsElement) {
+            correctStepsElement.scrollTop =
+                correctStepsElement.scrollHeight;
+        }
+
+        if (whiteboardPanel) {
+            whiteboardPanel.scrollTop =
+                whiteboardPanel.scrollHeight;
+        }
+    });
 }
 
 async function playTutorAudio(
-    speakUrl = "/speak"
+    base64Audio
 ) {
     try {
         if (!tutorAudioContext) {
@@ -842,60 +709,10 @@ async function playTutorAudio(
             );
         }
 
-        console.log(
-            "Requesting tutor audio:",
-            speakUrl
-        );
-
-        const response = await fetch(
-            speakUrl,
-            {
-                cache: "no-store",
-            }
-        );
-
-        console.log(
-            "Tutor audio HTTP response:",
-            {
-                status: response.status,
-                statusText:
-                    response.statusText,
-                contentType:
-                    response.headers.get(
-                        "content-type"
-                    ),
-            }
-        );
-
-        if (!response.ok) {
-            const errorText =
-                await response.text();
-
-            throw new Error(
-                `Speech request failed: ` +
-                `${response.status} ` +
-                `${errorText}`
-            );
-        }
-
         const audioBytes =
-            await response.arrayBuffer();
-
-        /*
-         * A nonzero byteLength confirms that the
-         * tutor audio reached the frontend.
-         */
-        console.log(
-            "Tutor audio received:",
-            {
-                bytes:
-                    audioBytes.byteLength,
-                contentType:
-                    response.headers.get(
-                        "content-type"
-                    ),
-            }
-        );
+            base64ToArrayBuffer(
+                base64Audio
+            );
 
         if (audioBytes.byteLength === 0) {
             throw new Error(
@@ -903,52 +720,18 @@ async function playTutorAudio(
             );
         }
 
-        /*
-         * The context should already be running
-         * from the Begin tap.
-         *
-         * Resume again in case iOS temporarily
-         * suspended it.
-         */
         if (
             tutorAudioContext.state !==
             "running"
         ) {
-            console.log(
-                "Resuming tutor audio context:",
-                tutorAudioContext.state
-            );
-
             await tutorAudioContext.resume();
         }
 
-        console.log(
-            "Decoding tutor audio."
-        );
-
         const decodedAudio =
-            await tutorAudioContext
-                .decodeAudioData(
-                    audioBytes.slice(0)
-                );
+            await tutorAudioContext.decodeAudioData(
+                audioBytes.slice(0)
+            );
 
-        console.log(
-            "Tutor audio decoded:",
-            {
-                duration:
-                    decodedAudio.duration,
-                sampleRate:
-                    decodedAudio.sampleRate,
-                channels:
-                    decodedAudio
-                        .numberOfChannels,
-            }
-        );
-
-        /*
-         * Stop an older tutor response if one is
-         * somehow still playing.
-         */
         if (activeTutorAudioSource) {
             try {
                 activeTutorAudioSource.stop();
@@ -963,8 +746,7 @@ async function playTutorAudio(
         }
 
         const source =
-            tutorAudioContext
-                .createBufferSource();
+            tutorAudioContext.createBufferSource();
 
         source.buffer = decodedAudio;
 
@@ -973,10 +755,6 @@ async function playTutorAudio(
         );
 
         source.onended = () => {
-            console.log(
-                "Tutor audio finished."
-            );
-
             if (
                 activeTutorAudioSource ===
                 source
@@ -988,44 +766,38 @@ async function playTutorAudio(
         activeTutorAudioSource = source;
 
         source.start(0);
-
-        console.log(
-            "Tutor audio started."
-        );
     } catch (error) {
         console.error(
             "Could not play tutor audio:",
             error
         );
 
-        setCheckpoint("Audio error");
+        setStatus("Audio error");
     }
 }
 
-function formatCheckpoint(checkpoint) {
-    const normalized =
-        String(checkpoint)
-            .trim()
-            .toLowerCase();
+function base64ToArrayBuffer(base64Audio) {
+    const binaryString =
+        window.atob(base64Audio);
 
-    const labels = {
-        listening: "Listening",
-        extracting: "Extracting",
-        reasoning: "Reasoning",
-        formatting: "Formatting",
-        tutoring: "Tutoring",
-        speaking: "Speaking",
-        complete: "Complete",
-    };
+    const bytes =
+        new Uint8Array(
+            binaryString.length
+        );
 
-    return (
-        labels[normalized] ??
-        normalized.charAt(0).toUpperCase() +
-            normalized.slice(1)
-    );
+    for (
+        let index = 0;
+        index < binaryString.length;
+        index += 1
+    ) {
+        bytes[index] =
+            binaryString.charCodeAt(index);
+    }
+
+    return bytes.buffer;
 }
 
-function setCheckpoint(text) {
+function setStatus(text) {
     if (!checkpointText) {
         return;
     }
@@ -1042,6 +814,8 @@ function setCheckpoint(text) {
 function openWhiteboard() {
     whiteboardOpen = true;
 
+    renderConversationHistory();
+
     whiteboardOverlay.classList.remove(
         "hidden"
     );
@@ -1051,6 +825,7 @@ function openWhiteboard() {
         "false"
     );
 
+    scrollConversationToBottom();
     updateButtons();
 }
 

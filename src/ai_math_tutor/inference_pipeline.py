@@ -4,6 +4,7 @@ from ai_math_tutor.rules import EXTRACTION_RULES, REASONING_RULES, TUTOR_RULES, 
 import json
 from kokoro import KPipeline
 import numpy as np
+from copy import deepcopy
 
 class InferencePipeline:
     def __init__(self):
@@ -28,6 +29,12 @@ class InferencePipeline:
 
         self.tutor_speech_model = KPipeline(lang_code="a")
 
+    def question_layer(self, audio):
+        question = self.question_model(audio)["text"].strip()
+
+        print(f"========== QUESTION RESULT ==========\n\n{question}\n\n=======================================")
+        return question
+
     def extraction_layer(self, image):
         message = [
             {
@@ -43,7 +50,7 @@ class InferencePipeline:
                     },
                     {
                         "type": "text",
-                        "text": "Transcribe the handwritten mathematical work in this image using the required JSON format."
+                        "text": "Faithfully recreate all visible content in this image"
                     }
                 ]
             }
@@ -66,20 +73,16 @@ class InferencePipeline:
         decoded_extract = self.extraction_processor.batch_decode(extracted_only, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].replace("<|im_end|>", "").strip()
 
 
-        extracted_math = json.loads(decoded_extract)
-        print(f"========== EXTRACTION RESULT ==========\n\n{json.dumps(extracted_math, ensure_ascii=False, indent=2)}\n\n=======================================")
-        return extracted_math
+        print(f"========== EXTRACTION RESULT ==========\n\n{decoded_extract}\n\n=======================================")
+        return decoded_extract
 
-    def reasoning_layer(self, extracted_math):
+    def reasoning_layer(self, conversation):
         message = [
             {
                 "role": "system",
                 "content": REASONING_RULES
             },
-            {
-                "role": "user",
-                "content": json.dumps(extracted_math, ensure_ascii=False, indent=2)
-            }
+            *conversation
         ]
 
         tokens_dict = self.reasoning_and_tutor_processor.apply_chat_template(
@@ -97,59 +100,26 @@ class InferencePipeline:
         input_len = tokens_dict["input_ids"].shape[1]
         reasoning_tokens = input_plus_response[:, input_len:]
 
-        decoded_reasoning = self.reasoning_and_tutor_processor.batch_decode(reasoning_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
+        reasoning = self.reasoning_and_tutor_processor.batch_decode(reasoning_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
 
-        reasoning = json.loads(decoded_reasoning)
-        print(f"========== REASONING RESULT ==========\n\n{json.dumps(reasoning, ensure_ascii=False, indent=2)}\n\n=======================================")
+        print(f"========== REASONING RESULT ==========\n\n{reasoning}\n\n=======================================")
         return reasoning
 
-    def question_layer(self, audio):
-        transcript = self.question_model(audio)["text"].strip()
+         
 
-
-        message = [
-            {
-                "role": "system",
-                "content": QUESTION_RULES
-            },
-            {
-                "role": "user",
-                "content": transcript
-            }
-        ]
+    def tutoring_layer(self, conversation, reasoning_note):
         
-        tokens_dict = self.reasoning_and_tutor_processor.apply_chat_template(
-            message,
-            tokenize=True,
-            return_dict=True,
-            return_tensors="pt",
-            add_generation_prompt=True,
-            enable_thinking=False
-        ).to("cuda:1")
-
-        with torch.inference_mode():
-            input_plus_response = self.reasoning_and_tutor_model.generate(**tokens_dict, max_new_tokens=512, do_sample=False)
-
-        input_len = tokens_dict["input_ids"].shape[1]
-        question_tokens = input_plus_response[:, input_len:]
-
-        decoded_question = self.reasoning_and_tutor_processor.batch_decode(question_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
-
-        print(f"========\n{repr(decoded_question)}\n================")
-
-        question = json.loads(decoded_question)
-        print(f"========== QUESTION RESULT ==========\n\n{json.dumps(question, ensure_ascii=False, indent=2)}\n\n=======================================")
-        return question     
-
-    def tutoring_layer(self, conversation):
+        internal_conversation = deepcopy(conversation)
+        internal_conversation[-1]["content"] += "\nReasoning Note:\n" + reasoning_note 
+        
         message = [
             {
                 "role": "system",
                 "content": TUTOR_RULES
-            }
+            },
+            *internal_conversation
         ]
         
-        message.extend(conversation)
         
         conversation_dict = self.reasoning_and_tutor_processor.apply_chat_template(
             message,
@@ -168,9 +138,10 @@ class InferencePipeline:
 
         tutoring = self.reasoning_and_tutor_processor.batch_decode(tutoring_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
 
+        tutoring_json = json.loads(tutoring)
 
-        print(f"========== TUTORING RESULT ==========\n\n{tutoring}\n\n=======================================")
-        return tutoring
+        print(f"========== TUTORING RESULT ==========\n\n{json.dumps(tutoring_json, ensure_ascii=False, indent=2)}\n\n=======================================")
+        return tutoring_json
     
     def speak_layer(self, tutoring):
         generator = self.tutor_speech_model(tutoring, voice="af_heart", speed=0.9)

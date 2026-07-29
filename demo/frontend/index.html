@@ -40,14 +40,14 @@
                 id="whiteboard-button"
                 class="whiteboard-button"
                 type="button"
-                aria-label="Open tutor whiteboard"
+                aria-label="Open conversation history"
             >
                 <span aria-hidden="true">
-                    📝
+                    💬
                 </span>
 
                 <span>
-                    Work
+                    Conversation
                 </span>
             </button>
 
@@ -88,7 +88,10 @@
         >
             <button
                 id="camera-audio-button"
-                class="control-button camera-audio-button"
+                class="
+                    control-button
+                    camera-audio-button
+                "
                 type="button"
                 aria-label="Hold to speak and capture work"
                 aria-pressed="false"
@@ -107,7 +110,10 @@
 
             <button
                 id="audio-only-button"
-                class="control-button audio-only-button"
+                class="
+                    control-button
+                    audio-only-button
+                "
                 type="button"
                 aria-label="Hold to speak without taking a picture"
                 aria-pressed="false"
@@ -142,7 +148,7 @@
                 id="whiteboard-close-button"
                 class="whiteboard-close-button"
                 type="button"
-                aria-label="Close whiteboard"
+                aria-label="Close conversation history"
             >
                 ×
             </button>
@@ -153,23 +159,28 @@
                 </p>
 
                 <h1 id="whiteboard-title">
-                    Your Work
+                    Conversation History
                 </h1>
             </header>
 
             <div class="whiteboard-content">
                 <section class="whiteboard-section">
                     <h2>
-                        Correct steps
+                        Messages
                     </h2>
 
                     <div
                         id="correct-steps"
-                        class="correct-steps"
+                        class="
+                            correct-steps
+                            conversation-history
+                        "
+                        role="log"
+                        aria-live="polite"
+                        aria-label="Conversation history"
                     >
                         <p class="empty-message">
-                            Submit a picture of your work to
-                            see the analyzed steps.
+                            Ask the tutor a question to begin.
                         </p>
                     </div>
                 </section>
@@ -179,6 +190,7 @@
                         whiteboard-section
                         incorrect-section
                     "
+                    hidden
                 >
                     <h2>
                         First incorrect step
@@ -187,9 +199,7 @@
                     <div
                         id="incorrect-step"
                         class="incorrect-step"
-                    >
-                        No incorrect step has been analyzed.
-                    </div>
+                    ></div>
                 </section>
 
                 <section
@@ -197,6 +207,7 @@
                         whiteboard-section
                         tutor-section
                     "
+                    hidden
                 >
                     <h2>
                         Tutor response
@@ -206,9 +217,7 @@
                         id="tutor-response"
                         class="tutor-response"
                         aria-live="polite"
-                    >
-                        Ask the tutor a question to begin.
-                    </div>
+                    ></div>
                 </section>
             </div>
         </section>
