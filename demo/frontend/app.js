@@ -115,46 +115,52 @@ async function startMedia() {
 }
 
 function playGreetingAudio() {
-    return new Promise((resolve, reject) => {
-        if (!("speechSynthesis" in window)) {
-            reject(
-                new Error(
-                    "Browser text-to-speech is unavailable."
-                )
-            );
-            return;
-        }
+    if (!("speechSynthesis" in window)) {
+        console.error(
+            "Browser text-to-speech is unavailable."
+        );
+        return;
+    }
 
-        const speech =
-            new SpeechSynthesisUtterance(
-                "Hello! I'm your AI math tutor."
-            );
+    window.speechSynthesis.cancel();
 
-        speech.lang = "en-US";
-        speech.rate = 0.95;
-        speech.pitch = 1;
-        speech.volume = 1;
+    const speech =
+        new SpeechSynthesisUtterance(
+            "Hello! I'm your AI math tutor."
+        );
 
-        speech.onend = () => {
-            console.log(
-                "Greeting speech finished."
-            );
+    speech.lang = "en-US";
+    speech.rate = 0.95;
+    speech.pitch = 1;
+    speech.volume = 1;
 
-            resolve();
-        };
+    speech.onstart = () => {
+        console.log(
+            "Greeting speech started."
+        );
+    };
 
-        speech.onerror = (event) => {
-            reject(
-                new Error(
-                    `Greeting speech failed: ${event.error}`
-                )
-            );
-        };
+    speech.onend = () => {
+        console.log(
+            "Greeting speech finished."
+        );
+    };
 
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(speech);
-    });
+    speech.onerror = (event) => {
+        console.error(
+            "Greeting speech failed:",
+            event.error,
+            event
+        );
+    };
+
+    /*
+     * Call speak directly during the user's click.
+     * Do not await it.
+     */
+    window.speechSynthesis.speak(speech);
 }
+
 async function beginTutor() {
     if (!beginButton || !beginOverlay) {
         console.error(
@@ -166,6 +172,12 @@ async function beginTutor() {
     beginButton.disabled = true;
     beginButton.textContent = "Starting…";
 
+    /*
+     * Start speech before any await so it remains
+     * part of the user's click gesture.
+     */
+    playGreetingAudio();
+
     const mediaStarted = await startMedia();
 
     if (!mediaStarted) {
@@ -174,27 +186,6 @@ async function beginTutor() {
         return;
     }
 
-    try {
-        /*
-         * This runs directly from the user's click,
-         * allowing the browser to play sound.
-         */
-        await playGreetingAudio();
-    } catch (error) {
-        /*
-         * The tutor can still open if the greeting
-         * file is missing or cannot be played.
-         */
-        console.error(
-            "The tutor started without greeting audio.",
-            error
-        );
-    }
-
-    /*
-     * Remove the overlay completely for the
-     * remainder of this page load.
-     */
     beginOverlay.remove();
 }
 
