@@ -65,7 +65,7 @@ class InferencePipeline:
         message = [
             {
                 "role": "system",
-                "content": {"type": "text", "text": REASONING_RULES}
+                "content": [{"type": "text", "text": REASONING_RULES}]
             },
             *internal_conversation
         ]
@@ -100,11 +100,12 @@ class InferencePipeline:
         
         current_turn = {
             "role": "user",
-            "content": 
+            "content": [
                 {
                     "type": "text",
                     "text": text
-                }           
+                }       
+            ]    
         }
         
         internal_conversation.append(current_turn)
@@ -112,7 +113,7 @@ class InferencePipeline:
         message = [
             {
                 "role": "system",
-                "content": {"type": "text", "text": TUTOR_RULES}
+                "content": [{"type": "text", "text": TUTOR_RULES}]
             },
             *internal_conversation
         ]
