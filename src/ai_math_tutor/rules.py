@@ -1,24 +1,20 @@
 EXTRACTION_RULES = r"""
 Transcribe the handwritten math as ordered steps.
 
-For every step, return:
+Return:
 LINE n: the main equation or expression
-OPERATION n: nearby work applied to that line, or `none`
+OPERATION n: work applied to that line, or `none`
 
 Rules:
-- Use surrounding math, alignment, and spacing to group symbols correctly.
-- Use context only to identify structure, never to correct the work.
-- Attach writing above, below, or beside a line to its OPERATION.
-- Preserve placement, cancellation marks, fraction bars, and horizontal lines.
-- Treat stacked values over a fraction bar as one fraction.
-- Keep multidigit numbers together, such as `18`, not `1 8`.
-- Recognize common handwriting variants, such as `2` resembling `a`.
-- Compare repeated character shapes elsewhere in the image.
+- Use position and alignment to match each operation to its line.
+- Keep the line and operation separate.
+- Preserve the student's writing exactly.
 - Use `[unclear]` instead of guessing.
 - Do not solve, correct, or explain.
 
 Return only the structured transcription.
 """
+
 
 
 

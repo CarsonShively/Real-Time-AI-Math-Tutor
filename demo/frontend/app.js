@@ -42,16 +42,8 @@ const whiteboardCloseButton = document.getElementById(
     "whiteboard-close-button"
 );
 
-const correctStepsElement = document.getElementById(
+const conversationElement = document.getElementById(
     "correct-steps"
-);
-
-const incorrectStepElement = document.getElementById(
-    "incorrect-step"
-);
-
-const tutorResponseElement = document.getElementById(
-    "tutor-response"
 );
 
 const IMAGE_CAPTURE_DELAY_MS = 1000;
@@ -85,7 +77,6 @@ let capturedImageBlob = null;
 
 let conversationHistory = [];
 
-prepareConversationPanel();
 
 async function startMedia() {
     try {
@@ -134,6 +125,7 @@ async function startMedia() {
     }
 }
 
+
 function playGreetingAudio() {
     if (!("speechSynthesis" in window)) {
         console.error(
@@ -166,10 +158,11 @@ function playGreetingAudio() {
     window.speechSynthesis.speak(speech);
 }
 
+
 function enableTutorAudio() {
     if (!tutorAudioContext) {
         console.error(
-            "Web Audio is unavailable in this browser."
+            "Web Audio is unavailable."
         );
 
         return;
@@ -177,12 +170,6 @@ function enableTutorAudio() {
 
     tutorAudioContext
         .resume()
-        .then(() => {
-            console.log(
-                "Tutor audio enabled:",
-                tutorAudioContext.state
-            );
-        })
         .catch((error) => {
             console.error(
                 "Could not enable tutor audio:",
@@ -191,15 +178,8 @@ function enableTutorAudio() {
         });
 }
 
+
 async function beginTutor() {
-    if (!beginButton || !beginOverlay) {
-        console.error(
-            "Begin overlay elements were not found."
-        );
-
-        return;
-    }
-
     beginButton.disabled = true;
     beginButton.textContent = "Starting…";
 
@@ -217,11 +197,8 @@ async function beginTutor() {
     }
 
     beginOverlay.remove();
-
-    console.log(
-        "Tutor interface started."
-    );
 }
+
 
 function beginHold(event, includeImage) {
     if (
@@ -248,6 +225,7 @@ function beginHold(event, includeImage) {
 
     startRecording();
 }
+
 
 function endHold(event) {
     if (!isRecording) {
@@ -279,6 +257,7 @@ function endHold(event) {
 
     stopRecording();
 }
+
 
 function startRecording() {
     const audioTracks =
@@ -318,6 +297,7 @@ function startRecording() {
     audioChunks = [];
     capturedImageBlob = null;
     imageCapturePromise = null;
+
     isRecording = true;
 
     setStatus("Listening");
@@ -355,6 +335,7 @@ function startRecording() {
     }
 }
 
+
 function stopRecording() {
     if (!isRecording) {
         return;
@@ -385,6 +366,7 @@ function stopRecording() {
     updateButtons();
 }
 
+
 async function handleRecordingStopped() {
     const mimeType =
         mediaRecorder?.mimeType ||
@@ -411,12 +393,16 @@ async function handleRecordingStopped() {
             : capturedImageBlob;
     }
 
+    const includedImage =
+        includeImageForTurn;
+
     audioChunks = [];
     imageCapturePromise = null;
     capturedImageBlob = null;
     mediaRecorder = null;
     activeButton = null;
     activePointerId = null;
+    includeImageForTurn = false;
 
     if (recordedAudioBlob.size === 0) {
         console.error(
@@ -432,11 +418,10 @@ async function handleRecordingStopped() {
     await handleCompletedTurn(
         recordedAudioBlob,
         imageBlob,
-        includeImageForTurn
+        includedImage
     );
-
-    includeImageForTurn = false;
 }
+
 
 function captureImage() {
     if (
@@ -486,6 +471,7 @@ function captureImage() {
     });
 }
 
+
 async function handleCompletedTurn(
     audioBlob,
     imageBlob,
@@ -496,6 +482,7 @@ async function handleCompletedTurn(
     }
 
     inferenceInProgress = true;
+
     setStatus("Reasoning");
     updateButtons();
 
@@ -535,18 +522,19 @@ async function handleCompletedTurn(
             );
         }
 
-        const data = await response.json();
+        const data =
+            await response.json();
 
         if (!Array.isArray(data.conversation)) {
             throw new Error(
-                "The backend response did not include a conversation array."
+                "The backend did not return a conversation array."
             );
         }
 
         conversationHistory =
             data.conversation;
 
-        renderConversationHistory();
+        await renderConversationHistory();
 
         if (
             typeof data.base64_audio ===
@@ -555,10 +543,6 @@ async function handleCompletedTurn(
         ) {
             await playTutorAudio(
                 data.base64_audio
-            );
-        } else {
-            console.warn(
-                "The backend response did not include tutor audio."
             );
         }
 
@@ -572,65 +556,36 @@ async function handleCompletedTurn(
         setStatus("Error");
     } finally {
         inferenceInProgress = false;
+
         updateButtons();
     }
 }
 
-function prepareConversationPanel() {
-    if (correctStepsElement) {
-        correctStepsElement.innerHTML = "";
 
-        correctStepsElement.setAttribute(
-            "aria-label",
-            "Conversation history"
-        );
-    }
-
-    if (incorrectStepElement) {
-        const section =
-            incorrectStepElement.closest(
-                "section"
-            );
-
-        if (section) {
-            section.hidden = true;
-        } else {
-            incorrectStepElement.hidden = true;
-        }
-    }
-
-    if (tutorResponseElement) {
-        const section =
-            tutorResponseElement.closest(
-                "section"
-            );
-
-        if (section) {
-            section.hidden = true;
-        } else {
-            tutorResponseElement.hidden = true;
-        }
-    }
-}
-
-function renderConversationHistory() {
-    if (!correctStepsElement) {
+async function renderConversationHistory() {
+    if (!conversationElement) {
         return;
     }
 
-    correctStepsElement.innerHTML = "";
+    if (window.MathJax?.typesetClear) {
+        window.MathJax.typesetClear(
+            [conversationElement]
+        );
+    }
+
+    conversationElement.innerHTML = "";
 
     if (conversationHistory.length === 0) {
         const emptyMessage =
-            document.createElement("div");
+            document.createElement("p");
 
         emptyMessage.className =
-            "conversation-empty";
+            "empty-message";
 
         emptyMessage.textContent =
-            "No conversation yet.";
+            "Ask the tutor a question to begin.";
 
-        correctStepsElement.appendChild(
+        conversationElement.appendChild(
             emptyMessage
         );
 
@@ -638,13 +593,13 @@ function renderConversationHistory() {
     }
 
     for (const turn of conversationHistory) {
-        const turnElement =
-            document.createElement("div");
-
         const role =
             turn?.role === "assistant"
                 ? "assistant"
                 : "user";
+
+        const turnElement =
+            document.createElement("div");
 
         turnElement.className =
             `conversation-turn conversation-${role}`;
@@ -677,27 +632,35 @@ function renderConversationHistory() {
             contentElement
         );
 
-        correctStepsElement.appendChild(
+        conversationElement.appendChild(
             turnElement
         );
+    }
+
+    if (window.MathJax?.typesetPromise) {
+        try {
+            await window.MathJax.typesetPromise(
+                [conversationElement]
+            );
+        } catch (error) {
+            console.error(
+                "Could not render LaTeX:",
+                error
+            );
+        }
     }
 
     scrollConversationToBottom();
 }
 
+
 function scrollConversationToBottom() {
     requestAnimationFrame(() => {
-        if (correctStepsElement) {
-            correctStepsElement.scrollTop =
-                correctStepsElement.scrollHeight;
-        }
-
-        if (whiteboardPanel) {
-            whiteboardPanel.scrollTop =
-                whiteboardPanel.scrollHeight;
-        }
+        conversationElement.scrollTop =
+            conversationElement.scrollHeight;
     });
 }
+
 
 async function playTutorAudio(
     base64Audio
@@ -716,7 +679,7 @@ async function playTutorAudio(
 
         if (audioBytes.byteLength === 0) {
             throw new Error(
-                "The tutor audio response was empty."
+                "The tutor audio was empty."
             );
         }
 
@@ -735,11 +698,8 @@ async function playTutorAudio(
         if (activeTutorAudioSource) {
             try {
                 activeTutorAudioSource.stop();
-            } catch (error) {
-                console.debug(
-                    "Previous tutor audio was already stopped.",
-                    error
-                );
+            } catch {
+                // The previous audio already ended.
             }
 
             activeTutorAudioSource = null;
@@ -776,6 +736,7 @@ async function playTutorAudio(
     }
 }
 
+
 function base64ToArrayBuffer(base64Audio) {
     const binaryString =
         window.atob(base64Audio);
@@ -797,6 +758,7 @@ function base64ToArrayBuffer(base64Audio) {
     return bytes.buffer;
 }
 
+
 function setStatus(text) {
     if (!checkpointText) {
         return;
@@ -811,10 +773,9 @@ function setStatus(text) {
     );
 }
 
-function openWhiteboard() {
-    whiteboardOpen = true;
 
-    renderConversationHistory();
+async function openWhiteboard() {
+    whiteboardOpen = true;
 
     whiteboardOverlay.classList.remove(
         "hidden"
@@ -825,9 +786,11 @@ function openWhiteboard() {
         "false"
     );
 
-    scrollConversationToBottom();
+    await renderConversationHistory();
+
     updateButtons();
 }
+
 
 function closeWhiteboard() {
     whiteboardOpen = false;
@@ -843,6 +806,7 @@ function closeWhiteboard() {
 
     updateButtons();
 }
+
 
 function updateButtons() {
     const cameraAudioDisabled =
@@ -901,6 +865,7 @@ function updateButtons() {
     );
 }
 
+
 function bindHoldButton(
     button,
     includeImage
@@ -944,6 +909,7 @@ function bindHoldButton(
         }
     );
 }
+
 
 bindHoldButton(
     cameraAudioButton,
