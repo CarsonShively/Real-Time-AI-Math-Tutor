@@ -26,7 +26,7 @@ dependencies = [
     "kokoro>=0.9.4,<1.0.0",
     "soundfile>=0.14.0,<1.0.0",
     "spacy>=3.8,<4",
-    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+    "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
     "accelerate>=1.10,<2",
     "bitsandbytes>=0.46,<1"
 ]
