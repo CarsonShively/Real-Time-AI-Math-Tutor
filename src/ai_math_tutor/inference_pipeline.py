@@ -110,7 +110,7 @@ class InferencePipeline:
     def tutoring_layer(self, conversation, reasoning_note):
         
         internal_conversation = deepcopy(conversation)
-        internal_conversation[-1]["content"] += "\nReasoning Note:\n" + reasoning_note 
+        internal_conversation[-1]["content"] += "\n\n\nReasoning Note: " + reasoning_note
         
         message = [
             {
@@ -138,10 +138,8 @@ class InferencePipeline:
 
         tutoring = self.reasoning_and_tutor_processor.batch_decode(tutoring_tokens, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0].strip()
 
-        tutoring_json = json.loads(tutoring)
-
-        print(f"========== TUTORING RESULT ==========\n\n{json.dumps(tutoring_json, ensure_ascii=False, indent=2)}\n\n=======================================")
-        return tutoring_json
+        print(f"========== TUTORING RESULT ==========\n\n{tutoring}\n\n=======================================")
+        return tutoring
     
     def speak_layer(self, tutoring):
         generator = self.tutor_speech_model(tutoring, voice="af_heart", speed=0.9)

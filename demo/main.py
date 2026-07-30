@@ -9,6 +9,7 @@ from PIL import Image
 from io import BytesIO
 import soundfile as sf
 import base64
+import json
 
 @asynccontextmanager
 async def lifespan(app):
@@ -36,7 +37,7 @@ async def inference(audio: UploadFile=File(...), image: UploadFile | None=File(d
         
         work = app.state.pipeline.extraction_layer(image)
         
-        user_turn = "Work:\n" + work + "\nQuestion:\n" + question
+        user_turn = work + "\n\n\n" + question
         app.state.conversation.add_user_turn(user_turn)
         
         
@@ -47,8 +48,12 @@ async def inference(audio: UploadFile=File(...), image: UploadFile | None=File(d
     reasoning = app.state.pipeline.reasoning_layer(app.state.conversation.get_conversation())
     tutoring = app.state.pipeline.tutoring_layer(app.state.conversation.get_conversation(), reasoning)
     
-    speak = app.state.pipeline.speak_layer(tutoring["speech_text"])
-    app.state.conversation.add_tutor_turn(tutoring["display_text"])
+    reasoning_json = json.loads(reasoning)
+    
+    tutoring_response = tutoring + "\n\n\n" + reasoning_json["tutoring_aid"]
+    
+    speak = app.state.pipeline.speak_layer(tutoring)
+    app.state.conversation.add_tutor_turn(tutoring_response)
     
     buffer = BytesIO()
     sf.write(
