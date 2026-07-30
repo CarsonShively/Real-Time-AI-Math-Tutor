@@ -34,25 +34,16 @@ async def inference(audio: UploadFile=File(...), image: UploadFile | None=File(d
     if image is not None:
         image_bytes = await image.read()
         image = Image.open(BytesIO(image_bytes)).convert("RGB")
+        app.state.conversation.add_image(image)
         
-        work = app.state.pipeline.extraction_layer(image)
+
+    app.state.conversation.add_user_turn(question)
         
-        user_turn = work + "\n\n\n" + question
-        app.state.conversation.add_user_turn(user_turn)
-        
-        
-    else:
-        user_turn = question
-        app.state.conversation.add_user_turn(user_turn)
-        
-    reasoning = app.state.pipeline.reasoning_layer(app.state.conversation.get_conversation())
-    tutoring = app.state.pipeline.tutoring_layer(app.state.conversation.get_conversation(), reasoning)
+    reasoning = app.state.pipeline.reasoning_layer(question, app.state.conversation.get_image(), app.state.conversation.get_conversation())
+    tutoring = app.state.pipeline.tutoring_layer(question, app.state.conversation.get_image(), app.state.conversation.get_conversation(), reasoning)
     
-    
-    tutoring_response = tutoring + "\n\n\n" + reasoning
-    
-    speak = app.state.pipeline.speak_layer(tutoring)
-    app.state.conversation.add_tutor_turn(tutoring_response)
+    speak = app.state.pipeline.speak_layer(tutoring["speech"])
+    app.state.conversation.add_tutor_turn(tutoring["speech"] + "\n\n" + tutoring["latex_aid"])
     
     buffer = BytesIO()
     sf.write(

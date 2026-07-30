@@ -1,6 +1,7 @@
 class ConversationState():
     def __init__(self):
         self.conversation = []
+        self.current_image = None
         self.memory = 10
         
     def add_user_turn(self, user: str):
@@ -19,3 +20,9 @@ class ConversationState():
         
     def get_conversation(self):
         return self.conversation[-self.memory:]
+    
+    def add_image(self, image):
+        self.current_image = None
+        
+    def get_image(self):
+        return self.current_image
