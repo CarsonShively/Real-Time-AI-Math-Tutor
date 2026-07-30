@@ -15,6 +15,7 @@ Rules:
 - Do not solve, correct, or explain.
 
 Return only the structured transcription.
+
 """
 
 
