@@ -40,7 +40,7 @@ async def inference(audio: UploadFile=File(...), image: UploadFile | None=File(d
     app.state.conversation.add_user_turn(question)
         
     reasoning = app.state.pipeline.reasoning_layer(question, app.state.conversation.get_image(), app.state.conversation.get_conversation())
-    tutoring = app.state.pipeline.tutoring_layer(question, app.state.conversation.get_image(), app.state.conversation.get_conversation(), reasoning)
+    tutoring = app.state.pipeline.tutoring_layer(question, app.state.conversation.get_conversation(), reasoning)
     
     speak = app.state.pipeline.speak_layer(tutoring["speech"])
     app.state.conversation.add_tutor_turn(tutoring["speech"] + "\n\n" + tutoring["latex_aid"])
