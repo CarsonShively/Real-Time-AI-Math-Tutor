@@ -1,9 +1,8 @@
 EXTRACTION_RULES = r"""
-convertt the image into thtis format: 
+convert the image into this format: 
 Line: latex format
-Operation: operation the user performed win words
 Line: next line in latex format
-Operation: the next operation the user performed on this line in words
+Line: next line in latex format
 """
         
 REASONING_RULES = r"""
