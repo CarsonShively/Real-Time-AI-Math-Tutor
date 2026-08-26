@@ -1,5 +1,3 @@
-# image and text both have same hf structure
-
 from transformers import BitsAndBytesConfig, AutoTokenizer, AutoModelForCausalLM
 import torch
 
