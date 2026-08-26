@@ -1,7 +1,5 @@
 from transformers import pipeline
 import torch
-from kokoro import KPipeline
-import numpy as np
 
 class AudioService:
     def __init__(self):
